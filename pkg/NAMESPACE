@@ -1,0 +1,7 @@
+
+importFrom("codetools",
+           "findGlobals")
+importFrom("CodeDepends",
+           "readScript", "getInputs")
+
+export("safemode")

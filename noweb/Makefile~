@@ -1,0 +1,4 @@
+
+all:
+	noweb safemode.Rnw
+	rubber --pdf safemode.tex

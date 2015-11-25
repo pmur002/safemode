@@ -1,0 +1,593 @@
+\documentclass[a4paper]{article}
+\usepackage{noweb}
+\usepackage{alltt}
+\usepackage{amsmath}
+\begin{document}
+\title{\textbf{A Function for ``safe mode'' R Sessions}}
+\author{Paul Murrell}
+\date{}
+\maketitle
+\begin{abstract}
+ 
+  This document describes an R function called \texttt{safemode()} that
+  monitors the activity that takes place on the
+  console in an R session and issues warnings when expressions
+  are evaluated in an inappropriate order.
+  
+  The document describes both the use of the command and also provides
+  a literate version of the function itself.
+  
+  This document is HEAVILY derived from Ross Ihaka's 
+  ``A Function for R Session Scripting.''
+\end{abstract}
+
+\section{The \texttt{safemode()} Function}
+
+When [[safemode()]] is invoked, a sub-interpreter is run to process the
+user's commands in ``safe mode.''  
+When this sub-interpreter is running, the the R
+command prompt is changed to [[safe> ]] and the continuation
+prompt to [[safe+ ]].  The sub-interpreter is exited by
+typing the command \verb|q()|.
+\begin{quote}
+  \begin{verbatim}
+> safemode()
+
+safe> 1:10
+ [1]  1  2  3  4  5  6  7  8  9 10
+ 
+safe> max(rnorm(100))
+[1] 2.592984
+
+safe> q()
+
+> 
+\end{verbatim}
+\end{quote}
+While in ``safe mode,'' expressions are checked to make sure
+that they make sense, based on previous expressions and warnings
+are issued if problems are detected.
+
+This is essentially all there is to know about using [[safemode()]],
+other than to note that a [[safemode()]] command cannot be run from a
+[[safemode()]] sub-interpreter.
+
+\section{Implementation of the \texttt{safemode()} Function}
+
+The [[safemode()]] function is implemented as a \emph{closure}.  The
+support functions it uses are encapsulated in a private environment,
+visible only to that function.  The mechanism used is as follows.
+<<safemode.R>>=
+<<comments-and-copyright>>
+safemode <-
+    local({
+        <<initialisation>>
+        <<warning state variables>>
+        <<support functions>>
+        <<read-eval-print loop>>
+        <<main function>>
+    })
+@
+
+\subsection{Initialisation}
+\label{sec:init}
+
+Each ``safe mode'' session records its own database of time stamps
+for symbols and its own database of dependencies for symbols.
+
+<<initialisation>>=
+timeDB <- new.env()
+depDB <- new.env()
+@ 
+
+\subsection{The Main Function}
+\label{sec:the-main-function}
+
+The main function takes one argument: whether to print out debugging information
+(which is, by default [[FALSE]]).  This function
+calls the main workhorse function that
+provides a read-eval-print-loop.
+<<main function>>=
+function(debug=FALSE) {
+    <<call the read-eval-print-loop>>
+    <<return an invisible value>>
+}
+@ %
+
+Now, everything is ready to call the read-eval-print loop. The first
+argument passed to the [[repl()]] function is the environment that
+the [[safemode]] function was called from.  This will almost
+always be the R global enviroment.  The second argument is a debugging flag.
+<<call the read-eval-print-loop>>=
+repl(sys.parent(), debug)
+@ %
+
+The function returns an
+invisible ([[NULL]]) value.
+<<return an invisible value>>=
+invisible()
+@ 
+
+\subsection{The Read-Eval-Print Loop}
+\label{sec:the-read-eval-print-loop}
+
+The [[repl()]] function takes over the role of the topmost level of
+functionality in R.  It reads the lines of text that the user types,
+parses them and evaluates the results.  It also has to handle
+exceptional conditions such as errors, warnings and user interrupts.
+
+The important strategy employed in this function
+is used to accumulate the lines the user types
+until a complete expression has been read.  Reading the lines is easy;
+it is done with [[readline()]].  Checking for a complete expression
+is trickier because parsing an incomplete expression trips an error.
+These must be caught using the [[tryCatch()]] mechanism and this
+type of error discriminated from other syntax errors.
+
+There is also the problem of user interrupts.  These can occur at any
+point in the read-eval-print process. To protect against such
+interrupts the whole read-eval-print process is embedded in a loop
+whose sole task is to catch and process interrupts.
+
+The general structure of the [[repl()]] function is shown by the
+following function.  Initial values are defined for the
+command prompt and the current expression and then the interrupt
+catching loop is run.
+<<read-eval-print loop>>=
+repl <-
+    function(env, debug) {
+        prompt = "safe> "
+        cmd = character()
+        repeat {
+            <<interrupt catching>>
+        }
+    }
+
+@ %def repl cmd prompt
+
+The code inside the [[repeat]] loop, in the function above, runs
+the \emph{repl} and catches any interrupts that occur with a
+[[tryCatch()]] statement.  The statement catches just interrupts and
+gives a fresh prompt.
+<<interrupt catching>>=
+ans <- tryCatch(repeat {
+    <<parse and evaluate expressions>>
+}, interrupt = function(x) x)
+if (inherits(ans, "interrupt")) {
+    cat("\nInterrupt!\n")
+    prompt <- "script> "
+    cmd <- character()
+}
+else
+    stop("Interrupt catcher caught non-interrupt")
+@ 
+
+Expressions are read and processed in a loop. A pass through the loop
+reads a single line of input with [[readline()]] and adds it to the
+[[cmd]] buffer.  Each time a line is added, an attempt is made to
+parse the contents of [[cmd]] and obtain a valid expression for
+evaluation. The parse is wrapped in a [[tryCatch()]] to trap any
+parsing errors that occur.  The result of this attempted parse
+determines what happens next.
+
+<<parse and evaluate expressions>>=
+repeat {
+    cmd <- c(cmd, readline(prompt))
+    ans <- tryCatch(parse(text = cmd),
+        error = function(e) e)
+    <<handle the results of the parse>>
+}
+@ 
+
+
+The result returned by the [[tryCatch]] is either a valid
+expression that can be evaluated or an error condition. We branch
+depending on the type of result obtained.
+<<handle the results of the parse>>=
+<<if there was an error deal with it>>
+<<otherwise handle the expression>>
+@ 
+
+There are two possible types of error to deal with.  Errors can be
+caused by an incomplete parse or by some other type of syntax error.
+If the expression is incomplete, we change the prompt to indicate
+continuation and return to the top of the loop to fetch another line
+of input.  If there was some other type of error, we deal with
+the error then we reset the command
+prompt and the state of the input buffer.
+
+<<if there was an error deal with it>>=
+if (inherits(ans, "error")) {
+    if (incompleteParse((ans))) {
+        prompt <- "safe+ "
+    }
+    else {
+        handleParseError(ans)
+        prompt <- "safe> "
+        cmd <- character()
+    }
+}
+@ 
+
+If there was no error, we have a valid expression.  
+We then choose between a number of special cases
+(such as quitting ``safe mode'') and the general case of
+evaluating the expression typed by the user.  When that is complete,
+we reset the command prompt and the state of the command buffer before
+continuing on to read the next expression.
+
+<<otherwise handle the expression>>=
+else {
+    <<handle special expression cases>>
+    <<handle the general expression case>>
+    prompt <- "safe> "
+    cmd <- character()
+}
+@ 
+
+If the expression was empty (the user idly typed the enter key) we
+simply go back to fetch another expression.  If the user typed [[q()]]
+then we exit from the repl and return to the top-level function.  If
+for some reason the user tried to invoke [[safemode()]] 
+we issue an error.  (This probably needs
+further thought.)
+
+<<handle special expression cases>>=
+if (length(ans) == 0) {
+    break
+}
+else if (isQuitCall(ans)) {
+    return()
+}
+else if (grepl("^safemode\\(",
+               deparse(ans[[1]], nlines = 1))) {
+    cat("Error: You can't call safemode() while in \"safe mode\"\n")
+    break
+}
+@ 
+
+If none of these special cases hold, we are in the general situation.
+We evaluate the expression that the user typed and print the answer.
+Note that it is possible for parsing to produce several calls in the
+expression returned from the parse.  (Such calls are separated by
+semicolons.) To handle the general case, we loop over the elements of
+the expression evaluating and printing each one in turn.
+
+Evaluation is carried out inside a [[tryCatchWithWarnings()]] call.
+This means that any warnings that occur are recorded (in the variables
+[[warningCalls]] and [[warningMessages]]).  After evaluation, a check
+is made of whether any new warnings have been issued.  If there were,
+the warnings are transferred to the global variable
+[[last.warning]]. There, they can be accessed with calls to the
+function [[warnings()]].  Finally, a call is made to [[displayWarnings()]]
+to display the warning messages in the correct way.
+
+<<handle the general expression case>>=
+else {
+    renewwarnings <<- TRUE
+    newwarnings <<- FALSE
+    for(e in ans) {
+        <<determine tracked symbols in expression>>
+        <<check for stale symbols in expression>>
+        e = tryCatchWithWarnings(withVisible(eval(e,
+            envir = env)))
+        if (inherits(e, "error")) {
+            handleError(e)
+        } else {
+            handleValue(e)
+            <<record time stamps and dependencies>>
+        }
+    }
+    if (newwarnings) {
+        warnings = warningCalls
+        names(warnings) = warningMessages
+        assign("last.warning",
+               warnings[1:nwarnings],
+               "package:base")
+        displayWarnings(nwarnings)
+    }
+}
+@ 
+
+\subsection{Evaluating expressions in ``safe mode''}
+\label{sec:safemode}
+
+BEFORE evaluation, we need to check that the expression does not involve any
+``stale'' symbols.
+
+AFTER evaluation, IF it was an assignment, we need to record new timestamps
+and possibly update dependencies.
+
+We have the expression, [[e]], and expression source, [[cmd]],
+both available to us.
+
+[[env]] is the parent environment of this ``safe mode.''
+
+<<determine tracked symbols in expression>>=
+library(codetools)
+dummy <- function() {}
+body(dummy) <- e
+vars <- findGlobals(dummy)
+tracked <- vars[vars %in% ls(timeDB)]
+if (debug) {
+    cat(paste("globals: ", paste(vars, collapse=", "), "\n"))
+    cat(paste("tracked: ", paste(tracked, collapse=", "), "\n"))
+}
+library(CodeDepends)
+sc <- readScript("", txt=cmd)
+info <- getInputs(sc)
+inputs <- info[[1]]@inputs
+outputs <- info[[1]]@outputs
+updates <- info[[1]]@updates
+if (debug) {
+    cat(paste("inputs: ", paste(inputs, collapse=", "), "\n"))
+    cat(paste("outputs: ", paste(outputs, collapse=", "), "\n"))
+    cat(paste("updates: ", paste(updates, collapse=", "), "\n"))
+}
+@ 
+
+<<check for stale symbols in expression>>=
+age <- function(x) {
+    get(x, timeDB, inherits=FALSE)
+}
+
+deps <- function(x) {
+    get(x, depDB, inherits=FALSE)
+}    
+
+stale <- function(x) {
+    dependents <- deps(x)
+    length(dependents) &&
+        (any(age(x) < sapply(dependents, age)) || 
+         any(sapply(dependents, stale)))
+}
+
+staleWarnMsg <- function(deps) {
+    N <- length(deps)
+    if (N == 1) {
+        paste0("Symbol '", deps, "' is stale!")
+    } else if (N == 2) {
+        paste0("Symbols '",
+               paste(deps, collapse="' and '"),
+               "' are stale")
+    } else {
+        paste0("Symbols '",
+               paste(paste(deps[-N], collapse="', '"),
+                     deps[N], sep="', and '"),
+               "' are stale")
+    }
+}
+
+if (length(tracked) > 0) {
+    staleDeps <- sapply(tracked, stale)
+    if (any(staleDeps))
+        withCallingHandlers(warning(staleWarnMsg(tracked[staleDeps])),
+                            warning = warningHandler)
+}
+@
+
+<<record time stamps and dependencies>>=
+# test for whether expression was an assignment
+assignment <- FALSE
+if (length(outputs) > 0) {
+    if (length(outputs) > 1 || length(updates) > 0)
+        stop("I did not think this could happen")
+    symbol <- outputs
+    assignment <- TRUE
+} else if (length(updates) > 0) {
+    symbol <- updates
+    assignment <- TRUE    
+}
+if (assignment) {
+    assign(symbol, as.numeric(Sys.time()), envir=timeDB)
+    assign(symbol, tracked, envir=depDB)
+    if (debug) {
+        cat("Time stamp database:\n")
+        print(sapply(ls(timeDB), get, envir=timeDB))
+        cat("Dependencies database:\n")
+        print(sapply(ls(depDB), get, envir=depDB))
+    }
+}
+@ 
+
+\subsection{Parsing Support Functions}
+\label{sec:parsing-support-functions}
+
+An incomplete parse is detected when the result of the parse is an
+error that contains the string [["unexpected end of input"]].
+
+<<support functions>>=
+incompleteParse <-
+    function(e)
+    (inherits(e, "error") &&
+     grepl("unexpected end of input", e$message))
+@ %def incompleteParse
+
+The most complicated support function is the one that handles the
+printing of error messages from parsing.  Because the parse is taking
+place using a character vector as input, the error messages produced
+look rather different from those produced when the parser gets its
+input from the console.  This function transforms the error messages
+into that form.
+
+<<support functions>>=
+handleParseError <-
+    function(e) {
+        msg = strsplit(conditionMessage(e), "\n")[[1]]
+        errortxt = msg[1]
+        msg = gsub("[0-9]+: ", "", msg[-c(1, length(msg))])
+        msg = msg[length(msg) - 1:0]
+        if (length(msg) == 1)
+            msg = paste(" in: \"", msg, "\"\n", sep = "")
+        else
+            msg = paste(" in:\n\"",
+                paste(msg, collapse = "\n"),
+                "\"\n", sep = "")
+        cat("Error",
+            gsub("\n.*", "",
+                 gsub("<text>:[0-9]+:[0-9]+", "",
+                      errortxt)),
+            msg, sep = "")
+    }
+@ %def handleParseError
+
+\subsection{Input-Output Support}
+\label{sec:input-output-support}
+
+The error messages produced during evaluation are easy to process.  We
+simply cat them to the output.
+
+<<support functions>>=
+handleError <-
+    function(e) {
+        cat("Error in", deparse(conditionCall(e)),
+            ":", conditionMessage(e), "\n")
+    }
+@ %def handleError
+
+Printing the values that result from evaluating expressions has one
+wrinkle to it.  We have to check the visibility of the result and only
+print ``visible'' results.
+
+<<support functions>>=
+handleValue <-
+    function(e) {
+        if (e$visible) {
+            print(e$value)
+        }
+    }
+@ %def handleValue
+
+\subsection{Warning Support}
+\label{sec:warning-support}
+
+A number of top-level closure variables are used to manage the warning
+messages produced by evaluation of expressions.  The following
+variables manage the accumulation of error messages.
+\begin{flushleft}
+  \quad\begin{tabular}{ll}
+    [[warningCalls]] & holds the calls that produced warnings \\
+    [[warningMessages]] & holds the warning messages \\
+    [[nwarnings]] & the number or warnings accumulated \\
+    [[renewwarnings]] & purge the warning list on next warning? \\
+    [[newwarnings]] & has the evaluation produced new warnings
+  \end{tabular}
+\end{flushleft}
+
+\noindent
+The variables are initialised as follows.
+
+<<warning state variables>>=
+warningCalls <- vector("list", 50)
+warningMessages <- character(50)
+nwarnings <- 0
+renewwarnings <- TRUE
+newwarnings <- FALSE
+@ %def warningCalls warningMessages nwarnings renewwarnings newwarnings
+
+Warnings are trapped by the following two functions.  The effect is to
+simply add warnings to the accumulated list of warnings and then call
+the built-in [[muffleWarning()]] restart.
+<<support functions>>=
+warningHandler <- function(w) {
+    newwarnings <<- TRUE
+    if (renewwarnings) {
+        renewwarnings <<- FALSE
+        nwarnings <<- 0
+    }
+    n <- nwarnings + 1
+    if (n <= 50) {
+        warningCalls[[n]] <<- conditionCall(w)
+        warningMessages[n] <<- conditionMessage(w)
+        nwarnings <<- n
+    }
+    invokeRestart("muffleWarning")
+}        
+tryCatchWithWarnings <- function(expr)
+    withCallingHandlers(tryCatch(expr,
+            error = function(e) e),
+        warning = warningHandler)
+@ %def tryCatchWithWarnings
+
+The [[displayWarnings()]] function is used to display warnings at the
+end of an evaluation.  If there are 10 or fewer messages they are
+displayed.  If there are more than 10 messages, the user is told to
+inspect them with [[warnings()]].  Only the first 50 messages are
+stored.
+
+<<support functions>>=
+displayWarnings <-
+    function(n) {
+        if (n <= 10)
+            print(warnings())
+        else if (n < 50) {
+            cat("There were",
+                nwarnings,
+                "warnings (use warnings() to see them)\n")
+        }
+        else
+            cat("There were 50 or more warnings",
+                "(use warnings() to see the first 50)\n")
+    }
+@ %def displayWarnings
+
+\subsection{Miscellany}
+\label{sec:miscellany}
+
+The following function does a quick-and-dirty check of whether a user
+typed [[q()]] at the command prompt.  It is rather easy to defeat
+this.  For example, typing [[(q())]] will cause an immediate exit
+from R.
+
+<<support functions>>=
+isQuitCall <-
+    function(e)
+    (!inherits(e, "error") &&
+     length(e) == 1 &&
+     deparse(e[[1]], nlines = 1) == "q()")
+@ %def isQuitCall
+
+\subsection{Comments and Copyright}
+\label{sec:comments-and-copyright}
+
+<<comments-and-copyright>>=
+###  Copyright Paul Murrell, 2015
+###
+###  Based VERY heavily on script.Rnw, which is Copyright Ross Ihaka, 2011
+###
+###  Distributed under the terms of GPL3, but may also be
+###  redistributed under any later version of the GPL.
+###
+###  Safe mode for R
+###
+###  Synopsis:
+###
+###  This function provides an environment that provides some 
+###  protection from stupidity arising from laziness
+###
+###    safemode()
+###    ...
+###    q()
+###
+###  Exit from safe mode using using q()
+###
+###  This is best regarded as an exercise in getting familar
+###  with R's condition system and a demonstration of how
+###  to write an interpreted REPL and an exploration of 
+###  the 'codetools' and 'CodeDepends' packages.
+
+@ 
+
+\newpage
+\section*{Chunk Index}
+\label{sec:chunk-index}
+
+\nowebchunks
+
+\newpage
+\section*{Identifier Index}
+\label{sec:identifier-index}
+
+\nowebindex
+
+\end{document}

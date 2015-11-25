@@ -1,0 +1,13 @@
+
+The source files are in ./noweb/
+
+All editing of R code should take place in there, then 'make' will generate ...
+
+  ./pkg/R/safemode.R 
+  ./pkg/inst/doc/safemode.pdf
+
+DESCRIPTION, NAMESPACE, and .Rd files will have to be manually maintained ...
+
+  ./pkg/DESCRIPTION
+  ./pkg/NAMESPACE
+  ./pkg/man/*.Rd
