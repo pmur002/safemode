@@ -160,7 +160,9 @@ catching loop is run.
 \nwlinkedidentc{repl}{NW3fNyKO-2jP4FB-1} <- function(env, debug, infile) \{
     \nwlinkedidentc{prompt}{NW3fNyKO-2jP4FB-1} <- "safe> "
     \nwlinkedidentc{cmd}{NW3fNyKO-2jP4FB-1} <- character()
-    if (!is.null(infile)) \{
+    if (is.null(infile)) \{
+        batch <- FALSE
+    \} else \{
         batch <- TRUE
         \LA{}init batch mode~{\nwtagstyle{}\subpageref{NW3fNyKO-3M0wdx-1}}\RA{}
     \}

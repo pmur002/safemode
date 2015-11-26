@@ -127,7 +127,9 @@ safemode <- local({
     repl <- function(env, debug, infile) {
         prompt <- "safe> "
         cmd <- character()
-        if (!is.null(infile)) {
+        if (is.null(infile)) {
+            batch <- FALSE
+        } else {
             batch <- TRUE
             con <- file(infile, "r")
         }
