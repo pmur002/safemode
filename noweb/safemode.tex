@@ -398,24 +398,26 @@ symbol that was assigned a new value.
 \nwenddocs{}\nwbegincode{31}\sublabel{NW3fNyKO-41HQ4C-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-41HQ4C-1}}}\moddef{record time stamps and dependencies~{\nwtagstyle{}\subpageref{NW3fNyKO-41HQ4C-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-4X48TB-1}}\nwenddeflinemarkup
 # test for whether expression was an assignment
 sc <- readScript("", txt=code)
-info <- getInputs(sc)
+info <- scriptInfo(sc)
 inputs <- info[[1]]@inputs
 outputs <- info[[1]]@outputs
 updates <- info[[1]]@updates
 \LA{}debug inputs and outputs~{\nwtagstyle{}\subpageref{NW3fNyKO-4Fird-1}}\RA{}
 assignment <- FALSE
+symbol <- character()
 if (length(outputs) > 0) \{
-    if (length(outputs) > 1 || length(updates) > 0)
-        stop("I did not think this could happen")
-    symbol <- outputs
+    symbol <- c(symbol, outputs)
     assignment <- TRUE
-\} else if (length(updates) > 0) \{
-    symbol <- updates
+\}
+if (length(updates) > 0) \{
+    symbol <- c(symbol, updates)
     assignment <- TRUE    
 \}
 if (assignment) \{
-    assign(symbol, as.numeric(Sys.time()), envir=timeDB)
-    assign(symbol, tracked, envir=depDB)
+    for (i in symbol) \{
+        assign(i, as.numeric(Sys.time()), envir=timeDB)
+        assign(symbol, tracked, envir=depDB)
+    \}
     \LA{}debug time and dependency databases~{\nwtagstyle{}\subpageref{NW3fNyKO-4RCJKm-1}}\RA{}
 \}
 \nwused{\\{NW3fNyKO-4X48TB-1}}\nwendcode{}\nwbegindocs{32}\nwdocspar

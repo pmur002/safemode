@@ -2,6 +2,6 @@
 importFrom("codetools",
            "findGlobals")
 importFrom("CodeDepends",
-           "readScript", "getInputs")
+           "readScript", "scriptInfo")
 
 export("safemode")

@@ -207,7 +207,7 @@ safemode <- local({
 				        handleValue(e)
 				        # test for whether expression was an assignment
 					sc <- readScript("", txt=code)
-					info <- getInputs(sc)
+					info <- scriptInfo(sc)
 					inputs <- info[[1]]@inputs
 					outputs <- info[[1]]@outputs
 					updates <- info[[1]]@updates
@@ -217,18 +217,20 @@ safemode <- local({
 					    cat(paste("updates: ", paste(updates, collapse=", "), "\n"))
 					}
 					assignment <- FALSE
+					symbol <- character()
 					if (length(outputs) > 0) {
-					    if (length(outputs) > 1 || length(updates) > 0)
-					        stop("I did not think this could happen")
-					    symbol <- outputs
+					    symbol <- c(symbol, outputs)
 					    assignment <- TRUE
-					} else if (length(updates) > 0) {
-					    symbol <- updates
+					}
+					if (length(updates) > 0) {
+					    symbol <- c(symbol, updates)
 					    assignment <- TRUE    
 					}
 					if (assignment) {
-					    assign(symbol, as.numeric(Sys.time()), envir=timeDB)
-					    assign(symbol, tracked, envir=depDB)
+					    for (i in symbol) {
+					        assign(i, as.numeric(Sys.time()), envir=timeDB)
+					        assign(symbol, tracked, envir=depDB)
+					    }
 					    if (debug) {
 					        cat("Time stamp database:\n")
 					        print(sapply(ls(timeDB), get, envir=timeDB))
