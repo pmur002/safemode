@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.1415926-2.5-1.40.14 (TeX Live 2013/Debian) (format=pdflatex 2015.9.8)  27 NOV 2015 10:21
+This is pdfTeX, Version 3.1415926-2.5-1.40.14 (TeX Live 2013/Debian) (format=pdflatex 2015.9.8)  27 NOV 2015 11:18
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -155,7 +155,7 @@ ment, we use \OT1/cmtt/m/n/10 getInputs()
 Here is how much of TeX's memory you used:
  1218 strings out of 495028
  14443 string characters out of 6181498
- 79322 words of memory out of 5000000
+ 79339 words of memory out of 5000000
  4470 multiletter control sequences out of 15000+600000
  10686 words of font info for 39 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
@@ -173,7 +173,7 @@ fb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmti10.pfb></u
 sr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt10.pfb></usr/sha
 re/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt12.pfb></usr/share/tex
 live/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt8.pfb>
-Output written on safemode.pdf (16 pages, 181397 bytes).
+Output written on safemode.pdf (16 pages, 181396 bytes).
 PDF statistics:
  108 PDF objects out of 1000 (max. 8388607)
  76 compressed objects within 1 object stream

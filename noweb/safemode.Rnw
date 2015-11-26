@@ -310,11 +310,11 @@ to display the warning messages in the correct way.
 if (!special) {
     renewwarnings <<- TRUE
     newwarnings <<- FALSE
-    for(e in ans) {
-        <<evaluate expression in safe mode>>
-    }
     if (batch) {
         <<batch expression>>
+    }
+    for(e in ans) {
+        <<evaluate expression in safe mode>>
     }
     if (newwarnings) {
         warnings = warningCalls

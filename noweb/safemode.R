@@ -178,6 +178,12 @@ safemode <- local({
 			    if (!special) {
 			        renewwarnings <<- TRUE
 			        newwarnings <<- FALSE
+			        if (batch) {
+			            cat(paste0(c("safe> ",
+				                 rep("safe+ ",
+				                     max(0, length(cmd) - 1))),
+				               cmd), sep="\n")
+			        }
 			        for(e in ans) {
 			            dummy <- function() {}
 				    body(dummy) <- e
@@ -235,12 +241,6 @@ safemode <- local({
 					    }
 					}
 				    }
-			        }
-			        if (batch) {
-			            cat(paste0(c("safe> ",
-				                 rep("safe+ ",
-				                     max(0, length(cmd) - 1))),
-				               cmd), sep="\n")
 			        }
 			        if (newwarnings) {
 			            warnings = warningCalls
