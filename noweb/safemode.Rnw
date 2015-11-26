@@ -102,12 +102,14 @@ depDB <- new.env()
 \label{sec:the-main-function}
 
 The main function, [[safemode()]],
-takes one argument: whether to print out debugging information
-([[FALSE]] by default).  This function
+takes two arguments: whether to print out debugging information
+([[FALSE]] by default) and a file to read input from ([[NULL]] by default,
+which means take input from the command line).  
+This function
 calls the main workhorse function that
 provides a read-eval-print-loop.
 <<main function>>=
-function(debug=FALSE) {
+function(debug=FALSE, infile=NULL) {
     <<call the read-eval-print-loop>>
     <<return an invisible value>>
 }
@@ -117,8 +119,9 @@ The first
 argument passed to the [[repl()]] function is the environment that
 the [[safemode()]] function was called from.  This will typically
 be the R global enviroment.  The second argument is a debugging flag.
+The third argument is a file to read R code from (or [[NULL]]).
 <<call the read-eval-print-loop>>=
-repl(sys.parent(), debug)
+repl(sys.parent(), debug, infile)
 @ %
 
 The main function returns an
@@ -150,14 +153,22 @@ whose sole task is to catch and process interrupts.
 
 The general structure of the [[repl()]] function is shown by the
 following function.  Initial values are defined for the
-command prompt and the current expression and then the interrupt
+command prompt and the current expression, we determine whether
+we are running in batch mode or interactively, and then the interrupt
 catching loop is run.
 <<read-eval-print loop>>=
-repl <- function(env, debug) {
-    prompt = "safe> "
-    cmd = character()
+repl <- function(env, debug, infile) {
+    prompt <- "safe> "
+    cmd <- character()
+    if (!is.null(infile)) {
+        batch <- TRUE
+        <<init batch mode>>
+    }
     repeat {
         <<interrupt catching>>
+    }
+    if (batch) {
+        <<batch shut down>>
     }
 }
 
@@ -168,21 +179,27 @@ the \emph{repl} and catches any interrupts that occur with a
 [[tryCatch()]] statement.  The statement catches just interrupts and
 gives a fresh prompt.
 <<interrupt catching>>=
-ans <- tryCatch(repeat {
-    <<parse and evaluate expressions>>
-}, interrupt = function(x) x)
+ans <- tryCatch(
+    repeat {
+        <<parse and evaluate expressions>>
+    }, interrupt = function(x) x)
 if (inherits(ans, "interrupt")) {
     cat("\nInterrupt!\n")
     prompt <- "script> "
     cmd <- character()
-}
-else
+} else {
     stop("Interrupt catcher caught non-interrupt")
+}
 @ 
 
 Expressions are read and processed in a loop. A pass through the loop
 reads a single line of input with [[readline()]] and adds it to the
-[[cmd]] buffer.  Each time a line is added, an attempt is made to
+[[cmd]] buffer (unless we are in batch mode).  
+
+We handle (whole-line) comments immediately by discarding them
+(or echoing them in batch mode).
+
+Each time a line is added, an attempt is made to
 parse the contents of [[cmd]] and obtain a valid expression for
 evaluation. The parse is wrapped in a [[tryCatch()]] to trap any
 parsing errors that occur.  The result of this attempted parse
@@ -190,9 +207,19 @@ determines what happens next.
 
 <<parse and evaluate expressions>>=
 repeat {
-    cmd <- c(cmd, readline(prompt))
-    ans <- tryCatch(parse(text = cmd),
-        error = function(e) e)
+    if (batch) {
+        <<batch read>>
+    } else {
+        cmd <- c(cmd, readline(prompt))
+    }
+    if (grepl("^#", cmd)) {
+        if (batch) {
+            <<batch comment>>
+        }
+        cmd <- character()
+        break
+    }
+    ans <- tryCatch(parse(text = cmd), error = function(e) e)
     <<handle the results of the parse>>
 }
 @ 
@@ -202,8 +229,7 @@ The result returned by the [[tryCatch]] is either a valid
 expression that can be evaluated or an error condition. We branch
 depending on the type of result obtained.
 <<handle the results of the parse>>=
-<<if there was an error deal with it>>
-<<otherwise handle the expression>>
+<<handle the expression>>
 @ 
 
 There are two possible types of error to deal with.  Errors can be
@@ -214,19 +240,6 @@ of input.  If there was some other type of error, we deal with
 the error then we reset the command
 prompt and the state of the input buffer.
 
-<<if there was an error deal with it>>=
-if (inherits(ans, "error")) {
-    if (incompleteParse((ans))) {
-        prompt <- "safe+ "
-    }
-    else {
-        handleParseError(ans)
-        prompt <- "safe> "
-        cmd <- character()
-    }
-}
-@ 
-
 If there was no error, we have a valid expression.  
 We then choose between a number of special cases
 (such as quitting ``safe mode'') and the general case of
@@ -234,8 +247,16 @@ evaluating the expression typed by the user.  When that is complete,
 we reset the command prompt and the state of the command buffer before
 continuing on to read the next expression.
 
-<<otherwise handle the expression>>=
-else {
+<<handle the expression>>=
+if (inherits(ans, "error")) {
+    if (incompleteParse((ans))) {
+        prompt <- "safe+ "
+    } else {
+        handleParseError(ans)
+        prompt <- "safe> "
+        cmd <- character()
+    }
+} else {
     <<handle special expression cases>>
     <<handle the general expression case>>
     prompt <- "safe> "
@@ -251,16 +272,21 @@ we issue an error.  (This probably needs
 further thought.)
 
 <<handle special expression cases>>=
+special <- TRUE
 if (length(ans) == 0) {
+    if (batch) {
+        <<batch blank line>>
+    }
+    cmd <- character()
     break
-}
-else if (isQuitCall(ans)) {
+} else if (isQuitCall(ans)) {
     return()
-}
-else if (grepl("^safemode\\(",
+} else if (grepl("^safemode\\(",
                deparse(ans[[1]], nlines = 1))) {
     cat("Error: You can't call safemode() while in \"safe mode\"\n")
     break
+} else {
+    special <- FALSE
 }
 @ 
 
@@ -279,7 +305,7 @@ function [[warnings()]].  Finally, a call is made to [[displayWarnings()]]
 to display the warning messages in the correct way.
 
 <<handle the general expression case>>=
-else {
+if (!special) {
     renewwarnings <<- TRUE
     newwarnings <<- FALSE
     for(e in ans) {
@@ -302,11 +328,14 @@ else {
 For each expression, [[e]], we determine which symbols need checking,
 check for any stale symbols, then evaluate the expression.
 
+Before we evaluate the expression, we deparse it so we have a text
+version of the code.
+
 Evaluation is carried out inside a [[tryCatchWithWarnings()]] call.
 This means that any warnings that occur are recorded (in the variables
 [[warningCalls]] and [[warningMessages]]).  Evaluation also occurs
 in the parent environment of the [[safemode()]] call, [[env]] (which will
-typically be the global environment).
+typically be the global environment).  
 
 If there were no errors, we record new time stamps and dependencies
 for any symbols assigned in the expression.
@@ -314,11 +343,15 @@ for any symbols assigned in the expression.
 <<evaluate expression in safe mode>>=
 <<determine tracked symbols in expression>>
 <<check for stale symbols in expression>>
-e = tryCatchWithWarnings(withVisible(eval(e,
-                                          envir = env)))
+code <- deparse(e)                                 
+e <- tryCatchWithWarnings(withVisible(eval(e,
+                                           envir = env)))
 if (inherits(e, "error")) {
     handleError(e)
 } else {
+    if (batch) {
+        <<batch expression>>
+    }
     handleValue(e)
     <<record time stamps and dependencies>>
 }
@@ -348,9 +381,10 @@ are stale, we issue a warning.
 <<check for stale symbols in expression>>=
 if (length(tracked) > 0) {
     staleDeps <- sapply(tracked, stale)
-    if (any(staleDeps))
+    if (any(staleDeps)) {
         withCallingHandlers(warning(staleWarnMsg(tracked[staleDeps])),
                             warning = warningHandler)
+    }
 }
 @
 
@@ -363,7 +397,7 @@ symbol that was assigned a new value.
 
 <<record time stamps and dependencies>>=
 # test for whether expression was an assignment
-sc <- readScript("", txt=cmd)
+sc <- readScript("", txt=code)
 info <- getInputs(sc)
 inputs <- info[[1]]@inputs
 outputs <- info[[1]]@outputs
@@ -395,7 +429,6 @@ access to the time stamp and dependencies databases.
 age <- function(x) {
     get(x, timeDB, inherits=FALSE)
 }
-
 deps <- function(x) {
     get(x, depDB, inherits=FALSE)
 }    
@@ -424,12 +457,12 @@ staleWarnMsg <- function(deps) {
     } else if (N == 2) {
         paste0("Symbols '",
                paste(deps, collapse="' and '"),
-               "' are stale")
+               "' are stale!")
     } else {
         paste0("Symbols '",
                paste(paste(deps[-N], collapse="', '"),
                      deps[N], sep="', and '"),
-               "' are stale")
+               "' are stale!")
     }
 }
 @ 
@@ -441,10 +474,10 @@ An incomplete parse is detected when the result of the parse is an
 error that contains the string [["unexpected end of input"]].
 
 <<support functions>>=
-incompleteParse <-
-    function(e)
+incompleteParse <- function(e) {
     (inherits(e, "error") &&
      grepl("unexpected end of input", e$message))
+}
 @ %def incompleteParse
 
 The most complicated support function is the one that handles the
@@ -455,24 +488,23 @@ input from the console.  This function transforms the error messages
 into that form.
 
 <<support functions>>=
-handleParseError <-
-    function(e) {
-        msg = strsplit(conditionMessage(e), "\n")[[1]]
-        errortxt = msg[1]
-        msg = gsub("[0-9]+: ", "", msg[-c(1, length(msg))])
-        msg = msg[length(msg) - 1:0]
-        if (length(msg) == 1)
-            msg = paste(" in: \"", msg, "\"\n", sep = "")
-        else
-            msg = paste(" in:\n\"",
-                paste(msg, collapse = "\n"),
-                "\"\n", sep = "")
-        cat("Error",
-            gsub("\n.*", "",
-                 gsub("<text>:[0-9]+:[0-9]+", "",
-                      errortxt)),
-            msg, sep = "")
-    }
+handleParseError <- function(e) {
+    msg = strsplit(conditionMessage(e), "\n")[[1]]
+    errortxt = msg[1]
+    msg = gsub("[0-9]+: ", "", msg[-c(1, length(msg))])
+    msg = msg[length(msg) - 1:0]
+    if (length(msg) == 1)
+        msg = paste(" in: \"", msg, "\"\n", sep = "")
+    else
+        msg = paste(" in:\n\"",
+                    paste(msg, collapse = "\n"),
+                    "\"\n", sep = "")
+    cat("Error",
+        gsub("\n.*", "",
+             gsub("<text>:[0-9]+:[0-9]+", "",
+                  errortxt)),
+        msg, sep = "")
+}
 @ %def handleParseError
 
 \subsection{Input-output support}
@@ -482,11 +514,10 @@ The error messages produced during evaluation are easy to process.  We
 simply cat them to the output.
 
 <<support functions>>=
-handleError <-
-    function(e) {
-        cat("Error in", deparse(conditionCall(e)),
-            ":", conditionMessage(e), "\n")
-    }
+handleError <- function(e) {
+    cat("Error in", deparse(conditionCall(e)),
+        ":", conditionMessage(e), "\n")
+}
 @ %def handleError
 
 Printing the values that result from evaluating expressions has one
@@ -494,12 +525,11 @@ wrinkle to it.  We have to check the visibility of the result and only
 print ``visible'' results.
 
 <<support functions>>=
-handleValue <-
-    function(e) {
-        if (e$visible) {
-            print(e$value)
-        }
+handleValue <- function(e) {
+    if (e$visible) {
+        print(e$value)
     }
+}
 @ %def handleValue
 
 \subsection{Warning support}
@@ -547,10 +577,11 @@ warningHandler <- function(w) {
     }
     invokeRestart("muffleWarning")
 }        
-tryCatchWithWarnings <- function(expr)
+tryCatchWithWarnings <- function(expr) {
     withCallingHandlers(tryCatch(expr,
-            error = function(e) e),
-        warning = warningHandler)
+                                 error = function(e) e),
+                        warning = warningHandler)
+}
 @ %def tryCatchWithWarnings
 
 The [[displayWarnings()]] function is used to display warnings at the
@@ -560,19 +591,18 @@ inspect them with [[warnings()]].  Only the first 50 messages are
 stored.
 
 <<support functions>>=
-displayWarnings <-
-    function(n) {
-        if (n <= 10)
-            print(warnings())
-        else if (n < 50) {
-            cat("There were",
-                nwarnings,
-                "warnings (use warnings() to see them)\n")
-        }
-        else
-            cat("There were 50 or more warnings",
-                "(use warnings() to see the first 50)\n")
+displayWarnings <- function(n) {
+    if (n <= 10) {
+        print(warnings())
+    } else if (n < 50) {
+        cat("There were",
+            nwarnings,
+            "warnings (use warnings() to see them)\n")
+    } else {
+        cat("There were 50 or more warnings",
+            "(use warnings() to see the first 50)\n")
     }
+}
 @ %def displayWarnings
 
 \subsection{Debugging support} 
@@ -605,6 +635,48 @@ if (debug) {
 }
 @ 
 
+\subsection{Batch mode}
+
+If the [[infile]] argument to [[safemode()]] is non-[[NULL]],
+we open a file to read from (rather than reading from the command line).
+
+<<init batch mode>>=
+con <- file(infile, "r")
+@ 
+
+In batch mode, we read from a connection rather than from the command line.
+
+<<batch read>>=
+cmd <- c(cmd, readLines(con, n=1))
+@ 
+
+In batch mode, comments are echoed to stdout.
+
+<<batch comment>>=
+cat(paste0("safe> ", cmd), "\n")
+@ 
+
+In batch mode, blank lines are echoed to stdout.
+
+<<batch blank line>>=
+cat("\n")
+@ 
+
+In batch mode, we echo the expression text to stdout.
+
+<<batch expression>>=
+cat(paste0(c("safe> ",
+             rep("safe+ ",
+                 max(0, length(code) - 1))),
+           code), sep="\n")
+@ 
+
+In batch mode, we must close the input connection.
+
+<<batch shut down>>=
+close(con)
+@ 
+
 \subsection{Miscellany}
 \label{sec:miscellany}
 
@@ -614,11 +686,11 @@ this.  For example, typing [[(q())]] will cause an immediate exit
 from R.
 
 <<support functions>>=
-isQuitCall <-
-    function(e)
+isQuitCall <- function(e) {
     (!inherits(e, "error") &&
-     length(e) == 1 &&
-     deparse(e[[1]], nlines = 1) == "q()")
+      length(e) == 1 &&
+      deparse(e[[1]], nlines = 1) == "q()")
+}
 @ %def isQuitCall
 
 \subsection{Comments and copyright}

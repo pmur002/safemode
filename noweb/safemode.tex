@@ -102,12 +102,14 @@ depDB <- new.env()
 \label{sec:the-main-function}
 
 The main function, {\Tt{}safemode()\nwendquote},
-takes one argument: whether to print out debugging information
-({\Tt{}FALSE\nwendquote} by default).  This function
+takes two arguments: whether to print out debugging information
+({\Tt{}FALSE\nwendquote} by default) and a file to read input from ({\Tt{}NULL\nwendquote} by default,
+which means take input from the command line).  
+This function
 calls the main workhorse function that
 provides a read-eval-print-loop.
 \nwenddocs{}\nwbegincode{5}\sublabel{NW3fNyKO-or39s-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-or39s-1}}}\moddef{main function~{\nwtagstyle{}\subpageref{NW3fNyKO-or39s-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-3xdkHW-1}}\nwenddeflinemarkup
-function(debug=FALSE) \{
+function(debug=FALSE, infile=NULL) \{
     \LA{}call the read-eval-print-loop~{\nwtagstyle{}\subpageref{NW3fNyKO-nYuTh-1}}\RA{}
     \LA{}return an invisible value~{\nwtagstyle{}\subpageref{NW3fNyKO-S95hp-1}}\RA{}
 \}
@@ -117,8 +119,9 @@ The first
 argument passed to the {\Tt{}repl()\nwendquote} function is the environment that
 the {\Tt{}safemode()\nwendquote} function was called from.  This will typically
 be the R global enviroment.  The second argument is a debugging flag.
+The third argument is a file to read R code from (or {\Tt{}NULL\nwendquote}).
 \nwenddocs{}\nwbegincode{7}\sublabel{NW3fNyKO-nYuTh-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-nYuTh-1}}}\moddef{call the read-eval-print-loop~{\nwtagstyle{}\subpageref{NW3fNyKO-nYuTh-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-or39s-1}}\nwenddeflinemarkup
-\nwlinkedidentc{repl}{NW3fNyKO-2jP4FB-1}(sys.parent(), debug)
+\nwlinkedidentc{repl}{NW3fNyKO-2jP4FB-1}(sys.parent(), debug, infile)
 \nwused{\\{NW3fNyKO-or39s-1}}\nwidentuses{\\{{\nwixident{repl}}{repl}}}\nwindexuse{\nwixident{repl}}{repl}{NW3fNyKO-nYuTh-1}\nwendcode{}\nwbegindocs{8}%
 
 The main function returns an
@@ -150,14 +153,22 @@ whose sole task is to catch and process interrupts.
 
 The general structure of the {\Tt{}repl()\nwendquote} function is shown by the
 following function.  Initial values are defined for the
-command prompt and the current expression and then the interrupt
+command prompt and the current expression, we determine whether
+we are running in batch mode or interactively, and then the interrupt
 catching loop is run.
 \nwenddocs{}\nwbegincode{11}\sublabel{NW3fNyKO-2jP4FB-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-2jP4FB-1}}}\moddef{read-eval-print loop~{\nwtagstyle{}\subpageref{NW3fNyKO-2jP4FB-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-3xdkHW-1}}\nwenddeflinemarkup
-\nwlinkedidentc{repl}{NW3fNyKO-2jP4FB-1} <- function(env, debug) \{
-    \nwlinkedidentc{prompt}{NW3fNyKO-2jP4FB-1} = "safe> "
-    \nwlinkedidentc{cmd}{NW3fNyKO-2jP4FB-1} = character()
+\nwlinkedidentc{repl}{NW3fNyKO-2jP4FB-1} <- function(env, debug, infile) \{
+    \nwlinkedidentc{prompt}{NW3fNyKO-2jP4FB-1} <- "safe> "
+    \nwlinkedidentc{cmd}{NW3fNyKO-2jP4FB-1} <- character()
+    if (!is.null(infile)) \{
+        batch <- TRUE
+        \LA{}init batch mode~{\nwtagstyle{}\subpageref{NW3fNyKO-3M0wdx-1}}\RA{}
+    \}
     repeat \{
         \LA{}interrupt catching~{\nwtagstyle{}\subpageref{NW3fNyKO-1uMRLP-1}}\RA{}
+    \}
+    if (batch) \{
+        \LA{}batch shut down~{\nwtagstyle{}\subpageref{NW3fNyKO-1ObEmC-1}}\RA{}
     \}
 \}
 
@@ -168,21 +179,27 @@ the \emph{repl} and catches any interrupts that occur with a
 {\Tt{}tryCatch()\nwendquote} statement.  The statement catches just interrupts and
 gives a fresh prompt.
 \nwenddocs{}\nwbegincode{13}\sublabel{NW3fNyKO-1uMRLP-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-1uMRLP-1}}}\moddef{interrupt catching~{\nwtagstyle{}\subpageref{NW3fNyKO-1uMRLP-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-2jP4FB-1}}\nwenddeflinemarkup
-ans <- tryCatch(repeat \{
-    \LA{}parse and evaluate expressions~{\nwtagstyle{}\subpageref{NW3fNyKO-XzPhD-1}}\RA{}
-\}, interrupt = function(x) x)
+ans <- tryCatch(
+    repeat \{
+        \LA{}parse and evaluate expressions~{\nwtagstyle{}\subpageref{NW3fNyKO-XzPhD-1}}\RA{}
+    \}, interrupt = function(x) x)
 if (inherits(ans, "interrupt")) \{
     cat("\\nInterrupt!\\n")
     \nwlinkedidentc{prompt}{NW3fNyKO-2jP4FB-1} <- "script> "
     \nwlinkedidentc{cmd}{NW3fNyKO-2jP4FB-1} <- character()
-\}
-else
+\} else \{
     stop("Interrupt catcher caught non-interrupt")
+\}
 \nwused{\\{NW3fNyKO-2jP4FB-1}}\nwidentuses{\\{{\nwixident{cmd}}{cmd}}\\{{\nwixident{prompt}}{prompt}}}\nwindexuse{\nwixident{cmd}}{cmd}{NW3fNyKO-1uMRLP-1}\nwindexuse{\nwixident{prompt}}{prompt}{NW3fNyKO-1uMRLP-1}\nwendcode{}\nwbegindocs{14}\nwdocspar
 
 Expressions are read and processed in a loop. A pass through the loop
 reads a single line of input with {\Tt{}readline()\nwendquote} and adds it to the
-{\Tt{}cmd\nwendquote} buffer.  Each time a line is added, an attempt is made to
+{\Tt{}cmd\nwendquote} buffer (unless we are in batch mode).  
+
+We handle (whole-line) comments immediately by discarding them
+(or echoing them in batch mode).
+
+Each time a line is added, an attempt is made to
 parse the contents of {\Tt{}cmd\nwendquote} and obtain a valid expression for
 evaluation. The parse is wrapped in a {\Tt{}tryCatch()\nwendquote} to trap any
 parsing errors that occur.  The result of this attempted parse
@@ -190,9 +207,19 @@ determines what happens next.
 
 \nwenddocs{}\nwbegincode{15}\sublabel{NW3fNyKO-XzPhD-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-XzPhD-1}}}\moddef{parse and evaluate expressions~{\nwtagstyle{}\subpageref{NW3fNyKO-XzPhD-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-1uMRLP-1}}\nwenddeflinemarkup
 repeat \{
-    \nwlinkedidentc{cmd}{NW3fNyKO-2jP4FB-1} <- c(\nwlinkedidentc{cmd}{NW3fNyKO-2jP4FB-1}, readline(\nwlinkedidentc{prompt}{NW3fNyKO-2jP4FB-1}))
-    ans <- tryCatch(parse(text = \nwlinkedidentc{cmd}{NW3fNyKO-2jP4FB-1}),
-        error = function(e) e)
+    if (batch) \{
+        \LA{}batch read~{\nwtagstyle{}\subpageref{NW3fNyKO-4Qk14X-1}}\RA{}
+    \} else \{
+        \nwlinkedidentc{cmd}{NW3fNyKO-2jP4FB-1} <- c(\nwlinkedidentc{cmd}{NW3fNyKO-2jP4FB-1}, readline(\nwlinkedidentc{prompt}{NW3fNyKO-2jP4FB-1}))
+    \}
+    if (grepl("^#", \nwlinkedidentc{cmd}{NW3fNyKO-2jP4FB-1})) \{
+        if (batch) \{
+            \LA{}batch comment~{\nwtagstyle{}\subpageref{NW3fNyKO-1r17xi-1}}\RA{}
+        \}
+        \nwlinkedidentc{cmd}{NW3fNyKO-2jP4FB-1} <- character()
+        break
+    \}
+    ans <- tryCatch(parse(text = \nwlinkedidentc{cmd}{NW3fNyKO-2jP4FB-1}), error = function(e) e)
     \LA{}handle the results of the parse~{\nwtagstyle{}\subpageref{NW3fNyKO-N1orb-1}}\RA{}
 \}
 \nwused{\\{NW3fNyKO-1uMRLP-1}}\nwidentuses{\\{{\nwixident{cmd}}{cmd}}\\{{\nwixident{prompt}}{prompt}}}\nwindexuse{\nwixident{cmd}}{cmd}{NW3fNyKO-XzPhD-1}\nwindexuse{\nwixident{prompt}}{prompt}{NW3fNyKO-XzPhD-1}\nwendcode{}\nwbegindocs{16}\nwdocspar
@@ -202,8 +229,7 @@ The result returned by the {\Tt{}tryCatch\nwendquote} is either a valid
 expression that can be evaluated or an error condition. We branch
 depending on the type of result obtained.
 \nwenddocs{}\nwbegincode{17}\sublabel{NW3fNyKO-N1orb-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-N1orb-1}}}\moddef{handle the results of the parse~{\nwtagstyle{}\subpageref{NW3fNyKO-N1orb-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-XzPhD-1}}\nwenddeflinemarkup
-\LA{}if there was an error deal with it~{\nwtagstyle{}\subpageref{NW3fNyKO-KMkqD-1}}\RA{}
-\LA{}otherwise handle the expression~{\nwtagstyle{}\subpageref{NW3fNyKO-42roNn-1}}\RA{}
+\LA{}handle the expression~{\nwtagstyle{}\subpageref{NW3fNyKO-3mTANZ-1}}\RA{}
 \nwused{\\{NW3fNyKO-XzPhD-1}}\nwendcode{}\nwbegindocs{18}\nwdocspar
 
 There are two possible types of error to deal with.  Errors can be
@@ -214,19 +240,6 @@ of input.  If there was some other type of error, we deal with
 the error then we reset the command
 prompt and the state of the input buffer.
 
-\nwenddocs{}\nwbegincode{19}\sublabel{NW3fNyKO-KMkqD-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-KMkqD-1}}}\moddef{if there was an error deal with it~{\nwtagstyle{}\subpageref{NW3fNyKO-KMkqD-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-N1orb-1}}\nwenddeflinemarkup
-if (inherits(ans, "error")) \{
-    if (\nwlinkedidentc{incompleteParse}{NW3fNyKO-1LAAIJ-4}((ans))) \{
-        \nwlinkedidentc{prompt}{NW3fNyKO-2jP4FB-1} <- "safe+ "
-    \}
-    else \{
-        \nwlinkedidentc{handleParseError}{NW3fNyKO-1LAAIJ-5}(ans)
-        \nwlinkedidentc{prompt}{NW3fNyKO-2jP4FB-1} <- "safe> "
-        \nwlinkedidentc{cmd}{NW3fNyKO-2jP4FB-1} <- character()
-    \}
-\}
-\nwused{\\{NW3fNyKO-N1orb-1}}\nwidentuses{\\{{\nwixident{cmd}}{cmd}}\\{{\nwixident{handleParseError}}{handleParseError}}\\{{\nwixident{incompleteParse}}{incompleteParse}}\\{{\nwixident{prompt}}{prompt}}}\nwindexuse{\nwixident{cmd}}{cmd}{NW3fNyKO-KMkqD-1}\nwindexuse{\nwixident{handleParseError}}{handleParseError}{NW3fNyKO-KMkqD-1}\nwindexuse{\nwixident{incompleteParse}}{incompleteParse}{NW3fNyKO-KMkqD-1}\nwindexuse{\nwixident{prompt}}{prompt}{NW3fNyKO-KMkqD-1}\nwendcode{}\nwbegindocs{20}\nwdocspar
-
 If there was no error, we have a valid expression.  
 We then choose between a number of special cases
 (such as quitting ``safe mode'') and the general case of
@@ -234,14 +247,22 @@ evaluating the expression typed by the user.  When that is complete,
 we reset the command prompt and the state of the command buffer before
 continuing on to read the next expression.
 
-\nwenddocs{}\nwbegincode{21}\sublabel{NW3fNyKO-42roNn-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-42roNn-1}}}\moddef{otherwise handle the expression~{\nwtagstyle{}\subpageref{NW3fNyKO-42roNn-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-N1orb-1}}\nwenddeflinemarkup
-else \{
+\nwenddocs{}\nwbegincode{19}\sublabel{NW3fNyKO-3mTANZ-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-3mTANZ-1}}}\moddef{handle the expression~{\nwtagstyle{}\subpageref{NW3fNyKO-3mTANZ-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-N1orb-1}}\nwenddeflinemarkup
+if (inherits(ans, "error")) \{
+    if (\nwlinkedidentc{incompleteParse}{NW3fNyKO-1LAAIJ-4}((ans))) \{
+        \nwlinkedidentc{prompt}{NW3fNyKO-2jP4FB-1} <- "safe+ "
+    \} else \{
+        \nwlinkedidentc{handleParseError}{NW3fNyKO-1LAAIJ-5}(ans)
+        \nwlinkedidentc{prompt}{NW3fNyKO-2jP4FB-1} <- "safe> "
+        \nwlinkedidentc{cmd}{NW3fNyKO-2jP4FB-1} <- character()
+    \}
+\} else \{
     \LA{}handle special expression cases~{\nwtagstyle{}\subpageref{NW3fNyKO-3UyNT8-1}}\RA{}
     \LA{}handle the general expression case~{\nwtagstyle{}\subpageref{NW3fNyKO-ujlbC-1}}\RA{}
     \nwlinkedidentc{prompt}{NW3fNyKO-2jP4FB-1} <- "safe> "
     \nwlinkedidentc{cmd}{NW3fNyKO-2jP4FB-1} <- character()
 \}
-\nwused{\\{NW3fNyKO-N1orb-1}}\nwidentuses{\\{{\nwixident{cmd}}{cmd}}\\{{\nwixident{prompt}}{prompt}}}\nwindexuse{\nwixident{cmd}}{cmd}{NW3fNyKO-42roNn-1}\nwindexuse{\nwixident{prompt}}{prompt}{NW3fNyKO-42roNn-1}\nwendcode{}\nwbegindocs{22}\nwdocspar
+\nwused{\\{NW3fNyKO-N1orb-1}}\nwidentuses{\\{{\nwixident{cmd}}{cmd}}\\{{\nwixident{handleParseError}}{handleParseError}}\\{{\nwixident{incompleteParse}}{incompleteParse}}\\{{\nwixident{prompt}}{prompt}}}\nwindexuse{\nwixident{cmd}}{cmd}{NW3fNyKO-3mTANZ-1}\nwindexuse{\nwixident{handleParseError}}{handleParseError}{NW3fNyKO-3mTANZ-1}\nwindexuse{\nwixident{incompleteParse}}{incompleteParse}{NW3fNyKO-3mTANZ-1}\nwindexuse{\nwixident{prompt}}{prompt}{NW3fNyKO-3mTANZ-1}\nwendcode{}\nwbegindocs{20}\nwdocspar
 
 If the expression was empty (the user idly typed the enter key) we
 simply go back to fetch another expression.  If the user typed {\Tt{}q()\nwendquote}
@@ -250,19 +271,24 @@ for some reason the user tried to invoke {\Tt{}safemode()\nwendquote}
 we issue an error.  (This probably needs
 further thought.)
 
-\nwenddocs{}\nwbegincode{23}\sublabel{NW3fNyKO-3UyNT8-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-3UyNT8-1}}}\moddef{handle special expression cases~{\nwtagstyle{}\subpageref{NW3fNyKO-3UyNT8-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-42roNn-1}}\nwenddeflinemarkup
+\nwenddocs{}\nwbegincode{21}\sublabel{NW3fNyKO-3UyNT8-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-3UyNT8-1}}}\moddef{handle special expression cases~{\nwtagstyle{}\subpageref{NW3fNyKO-3UyNT8-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-3mTANZ-1}}\nwenddeflinemarkup
+special <- TRUE
 if (length(ans) == 0) \{
+    if (batch) \{
+        \LA{}batch blank line~{\nwtagstyle{}\subpageref{NW3fNyKO-VjREX-1}}\RA{}
+    \}
+    \nwlinkedidentc{cmd}{NW3fNyKO-2jP4FB-1} <- character()
     break
-\}
-else if (\nwlinkedidentc{isQuitCall}{NW3fNyKO-1LAAIJ-A}(ans)) \{
+\} else if (\nwlinkedidentc{isQuitCall}{NW3fNyKO-1LAAIJ-A}(ans)) \{
     return()
-\}
-else if (grepl("^safemode\\\\(",
+\} else if (grepl("^safemode\\\\(",
                deparse(ans[[1]], nlines = 1))) \{
     cat("Error: You can't call safemode() while in \\"safe mode\\"\\n")
     break
+\} else \{
+    special <- FALSE
 \}
-\nwused{\\{NW3fNyKO-42roNn-1}}\nwidentuses{\\{{\nwixident{isQuitCall}}{isQuitCall}}}\nwindexuse{\nwixident{isQuitCall}}{isQuitCall}{NW3fNyKO-3UyNT8-1}\nwendcode{}\nwbegindocs{24}\nwdocspar
+\nwused{\\{NW3fNyKO-3mTANZ-1}}\nwidentuses{\\{{\nwixident{cmd}}{cmd}}\\{{\nwixident{isQuitCall}}{isQuitCall}}}\nwindexuse{\nwixident{cmd}}{cmd}{NW3fNyKO-3UyNT8-1}\nwindexuse{\nwixident{isQuitCall}}{isQuitCall}{NW3fNyKO-3UyNT8-1}\nwendcode{}\nwbegindocs{22}\nwdocspar
 
 If none of these special cases hold, we are in the general situation.
 We evaluate the expression that the user typed and print the answer.
@@ -278,8 +304,8 @@ the warnings are transferred to the global variable
 function {\Tt{}warnings()\nwendquote}.  Finally, a call is made to {\Tt{}displayWarnings()\nwendquote}
 to display the warning messages in the correct way.
 
-\nwenddocs{}\nwbegincode{25}\sublabel{NW3fNyKO-ujlbC-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-ujlbC-1}}}\moddef{handle the general expression case~{\nwtagstyle{}\subpageref{NW3fNyKO-ujlbC-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-42roNn-1}}\nwenddeflinemarkup
-else \{
+\nwenddocs{}\nwbegincode{23}\sublabel{NW3fNyKO-ujlbC-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-ujlbC-1}}}\moddef{handle the general expression case~{\nwtagstyle{}\subpageref{NW3fNyKO-ujlbC-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-3mTANZ-1}}\nwenddeflinemarkup
+if (!special) \{
     \nwlinkedidentc{renewwarnings}{NW3fNyKO-4ZejqA-1} <<- TRUE
     \nwlinkedidentc{newwarnings}{NW3fNyKO-4ZejqA-1} <<- FALSE
     for(e in ans) \{
@@ -294,7 +320,7 @@ else \{
         \nwlinkedidentc{displayWarnings}{NW3fNyKO-1LAAIJ-9}(\nwlinkedidentc{nwarnings}{NW3fNyKO-4ZejqA-1})
     \}
 \}
-\nwused{\\{NW3fNyKO-42roNn-1}}\nwidentuses{\\{{\nwixident{displayWarnings}}{displayWarnings}}\\{{\nwixident{newwarnings}}{newwarnings}}\\{{\nwixident{nwarnings}}{nwarnings}}\\{{\nwixident{renewwarnings}}{renewwarnings}}\\{{\nwixident{warningCalls}}{warningCalls}}\\{{\nwixident{warningMessages}}{warningMessages}}}\nwindexuse{\nwixident{displayWarnings}}{displayWarnings}{NW3fNyKO-ujlbC-1}\nwindexuse{\nwixident{newwarnings}}{newwarnings}{NW3fNyKO-ujlbC-1}\nwindexuse{\nwixident{nwarnings}}{nwarnings}{NW3fNyKO-ujlbC-1}\nwindexuse{\nwixident{renewwarnings}}{renewwarnings}{NW3fNyKO-ujlbC-1}\nwindexuse{\nwixident{warningCalls}}{warningCalls}{NW3fNyKO-ujlbC-1}\nwindexuse{\nwixident{warningMessages}}{warningMessages}{NW3fNyKO-ujlbC-1}\nwendcode{}\nwbegindocs{26}\nwdocspar
+\nwused{\\{NW3fNyKO-3mTANZ-1}}\nwidentuses{\\{{\nwixident{displayWarnings}}{displayWarnings}}\\{{\nwixident{newwarnings}}{newwarnings}}\\{{\nwixident{nwarnings}}{nwarnings}}\\{{\nwixident{renewwarnings}}{renewwarnings}}\\{{\nwixident{warningCalls}}{warningCalls}}\\{{\nwixident{warningMessages}}{warningMessages}}}\nwindexuse{\nwixident{displayWarnings}}{displayWarnings}{NW3fNyKO-ujlbC-1}\nwindexuse{\nwixident{newwarnings}}{newwarnings}{NW3fNyKO-ujlbC-1}\nwindexuse{\nwixident{nwarnings}}{nwarnings}{NW3fNyKO-ujlbC-1}\nwindexuse{\nwixident{renewwarnings}}{renewwarnings}{NW3fNyKO-ujlbC-1}\nwindexuse{\nwixident{warningCalls}}{warningCalls}{NW3fNyKO-ujlbC-1}\nwindexuse{\nwixident{warningMessages}}{warningMessages}{NW3fNyKO-ujlbC-1}\nwendcode{}\nwbegindocs{24}\nwdocspar
 
 \subsection{Evaluating expressions in ``safe mode''}
 \label{sec:safemode}
@@ -302,27 +328,34 @@ else \{
 For each expression, {\Tt{}e\nwendquote}, we determine which symbols need checking,
 check for any stale symbols, then evaluate the expression.
 
+Before we evaluate the expression, we deparse it so we have a text
+version of the code.
+
 Evaluation is carried out inside a {\Tt{}tryCatchWithWarnings()\nwendquote} call.
 This means that any warnings that occur are recorded (in the variables
 {\Tt{}warningCalls\nwendquote} and {\Tt{}warningMessages\nwendquote}).  Evaluation also occurs
 in the parent environment of the {\Tt{}safemode()\nwendquote} call, {\Tt{}env\nwendquote} (which will
-typically be the global environment).
+typically be the global environment).  
 
 If there were no errors, we record new time stamps and dependencies
 for any symbols assigned in the expression.
 
-\nwenddocs{}\nwbegincode{27}\sublabel{NW3fNyKO-4X48TB-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-4X48TB-1}}}\moddef{evaluate expression in safe mode~{\nwtagstyle{}\subpageref{NW3fNyKO-4X48TB-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-ujlbC-1}}\nwenddeflinemarkup
+\nwenddocs{}\nwbegincode{25}\sublabel{NW3fNyKO-4X48TB-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-4X48TB-1}}}\moddef{evaluate expression in safe mode~{\nwtagstyle{}\subpageref{NW3fNyKO-4X48TB-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-ujlbC-1}}\nwenddeflinemarkup
 \LA{}determine tracked symbols in expression~{\nwtagstyle{}\subpageref{NW3fNyKO-24swck-1}}\RA{}
 \LA{}check for stale symbols in expression~{\nwtagstyle{}\subpageref{NW3fNyKO-1i5iWR-1}}\RA{}
-e = \nwlinkedidentc{tryCatchWithWarnings}{NW3fNyKO-1LAAIJ-8}(withVisible(eval(e,
-                                          envir = env)))
+code <- deparse(e)                                 
+e <- \nwlinkedidentc{tryCatchWithWarnings}{NW3fNyKO-1LAAIJ-8}(withVisible(eval(e,
+                                           envir = env)))
 if (inherits(e, "error")) \{
     \nwlinkedidentc{handleError}{NW3fNyKO-1LAAIJ-6}(e)
 \} else \{
+    if (batch) \{
+        \LA{}batch expression~{\nwtagstyle{}\subpageref{NW3fNyKO-2EECxy-1}}\RA{}
+    \}
     \nwlinkedidentc{handleValue}{NW3fNyKO-1LAAIJ-7}(e)
     \LA{}record time stamps and dependencies~{\nwtagstyle{}\subpageref{NW3fNyKO-41HQ4C-1}}\RA{}
 \}
-\nwused{\\{NW3fNyKO-ujlbC-1}}\nwidentuses{\\{{\nwixident{handleError}}{handleError}}\\{{\nwixident{handleValue}}{handleValue}}\\{{\nwixident{tryCatchWithWarnings}}{tryCatchWithWarnings}}}\nwindexuse{\nwixident{handleError}}{handleError}{NW3fNyKO-4X48TB-1}\nwindexuse{\nwixident{handleValue}}{handleValue}{NW3fNyKO-4X48TB-1}\nwindexuse{\nwixident{tryCatchWithWarnings}}{tryCatchWithWarnings}{NW3fNyKO-4X48TB-1}\nwendcode{}\nwbegindocs{28}\nwdocspar
+\nwused{\\{NW3fNyKO-ujlbC-1}}\nwidentuses{\\{{\nwixident{handleError}}{handleError}}\\{{\nwixident{handleValue}}{handleValue}}\\{{\nwixident{tryCatchWithWarnings}}{tryCatchWithWarnings}}}\nwindexuse{\nwixident{handleError}}{handleError}{NW3fNyKO-4X48TB-1}\nwindexuse{\nwixident{handleValue}}{handleValue}{NW3fNyKO-4X48TB-1}\nwindexuse{\nwixident{tryCatchWithWarnings}}{tryCatchWithWarnings}{NW3fNyKO-4X48TB-1}\nwendcode{}\nwbegindocs{26}\nwdocspar
 
 We have the expression, {\Tt{}e\nwendquote}, and expression source, {\Tt{}cmd\nwendquote},
 both available to us.
@@ -334,25 +367,26 @@ because {\Tt{}findGlobals()\nwendquote}
 only works on closures.  We also can only check symbols for which
 we already have a time stamp.
 
-\nwenddocs{}\nwbegincode{29}\sublabel{NW3fNyKO-24swck-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-24swck-1}}}\moddef{determine tracked symbols in expression~{\nwtagstyle{}\subpageref{NW3fNyKO-24swck-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-4X48TB-1}}\nwenddeflinemarkup
+\nwenddocs{}\nwbegincode{27}\sublabel{NW3fNyKO-24swck-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-24swck-1}}}\moddef{determine tracked symbols in expression~{\nwtagstyle{}\subpageref{NW3fNyKO-24swck-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-4X48TB-1}}\nwenddeflinemarkup
 dummy <- function() \{\}
 body(dummy) <- e
 vars <- findGlobals(dummy)
 tracked <- vars[vars %in% ls(timeDB)]
 \LA{}debug globals~{\nwtagstyle{}\subpageref{NW3fNyKO-2ZXfip-1}}\RA{}
-\nwused{\\{NW3fNyKO-4X48TB-1}}\nwendcode{}\nwbegindocs{30}\nwdocspar
+\nwused{\\{NW3fNyKO-4X48TB-1}}\nwendcode{}\nwbegindocs{28}\nwdocspar
 
 If there are any symbols to check, and any of those symbols
 are stale, we issue a warning.
 
-\nwenddocs{}\nwbegincode{31}\sublabel{NW3fNyKO-1i5iWR-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-1i5iWR-1}}}\moddef{check for stale symbols in expression~{\nwtagstyle{}\subpageref{NW3fNyKO-1i5iWR-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-4X48TB-1}}\nwenddeflinemarkup
+\nwenddocs{}\nwbegincode{29}\sublabel{NW3fNyKO-1i5iWR-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-1i5iWR-1}}}\moddef{check for stale symbols in expression~{\nwtagstyle{}\subpageref{NW3fNyKO-1i5iWR-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-4X48TB-1}}\nwenddeflinemarkup
 if (length(tracked) > 0) \{
     staleDeps <- sapply(tracked, stale)
-    if (any(staleDeps))
+    if (any(staleDeps)) \{
         withCallingHandlers(warning(staleWarnMsg(tracked[staleDeps])),
                             warning = warningHandler)
+    \}
 \}
-\nwused{\\{NW3fNyKO-4X48TB-1}}\nwendcode{}\nwbegindocs{32}\nwdocspar
+\nwused{\\{NW3fNyKO-4X48TB-1}}\nwendcode{}\nwbegindocs{30}\nwdocspar
 
 To determine whether the expression involved an assignment, we
 use {\Tt{}getInputs()\nwendquote} from the \pkg{CodeDepends} package.
@@ -361,9 +395,9 @@ symobls in the expression, then we have an assignment,
 so we record a new time stamp (and update the dependencies) for the
 symbol that was assigned a new value.
 
-\nwenddocs{}\nwbegincode{33}\sublabel{NW3fNyKO-41HQ4C-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-41HQ4C-1}}}\moddef{record time stamps and dependencies~{\nwtagstyle{}\subpageref{NW3fNyKO-41HQ4C-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-4X48TB-1}}\nwenddeflinemarkup
+\nwenddocs{}\nwbegincode{31}\sublabel{NW3fNyKO-41HQ4C-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-41HQ4C-1}}}\moddef{record time stamps and dependencies~{\nwtagstyle{}\subpageref{NW3fNyKO-41HQ4C-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-4X48TB-1}}\nwenddeflinemarkup
 # test for whether expression was an assignment
-sc <- readScript("", txt=\nwlinkedidentc{cmd}{NW3fNyKO-2jP4FB-1})
+sc <- readScript("", txt=code)
 info <- getInputs(sc)
 inputs <- info[[1]]@inputs
 outputs <- info[[1]]@outputs
@@ -384,39 +418,38 @@ if (assignment) \{
     assign(symbol, tracked, envir=depDB)
     \LA{}debug time and dependency databases~{\nwtagstyle{}\subpageref{NW3fNyKO-4RCJKm-1}}\RA{}
 \}
-\nwused{\\{NW3fNyKO-4X48TB-1}}\nwidentuses{\\{{\nwixident{cmd}}{cmd}}}\nwindexuse{\nwixident{cmd}}{cmd}{NW3fNyKO-41HQ4C-1}\nwendcode{}\nwbegindocs{34}\nwdocspar
+\nwused{\\{NW3fNyKO-4X48TB-1}}\nwendcode{}\nwbegindocs{32}\nwdocspar
 
 \subsection{Stale symbol support functions}
 
 The functions {\Tt{}age()\nwendquote} and {\Tt{}deps()\nwendquote} provide convenient
 access to the time stamp and dependencies databases.
 
-\nwenddocs{}\nwbegincode{35}\sublabel{NW3fNyKO-1LAAIJ-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-1LAAIJ-1}}}\moddef{support functions~{\nwtagstyle{}\subpageref{NW3fNyKO-1LAAIJ-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-3xdkHW-1}}\nwprevnextdefs{\relax}{NW3fNyKO-1LAAIJ-2}\nwenddeflinemarkup
+\nwenddocs{}\nwbegincode{33}\sublabel{NW3fNyKO-1LAAIJ-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-1LAAIJ-1}}}\moddef{support functions~{\nwtagstyle{}\subpageref{NW3fNyKO-1LAAIJ-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-3xdkHW-1}}\nwprevnextdefs{\relax}{NW3fNyKO-1LAAIJ-2}\nwenddeflinemarkup
 age <- function(x) \{
     get(x, timeDB, inherits=FALSE)
 \}
-
 deps <- function(x) \{
     get(x, depDB, inherits=FALSE)
 \}    
-\nwalsodefined{\\{NW3fNyKO-1LAAIJ-2}\\{NW3fNyKO-1LAAIJ-3}\\{NW3fNyKO-1LAAIJ-4}\\{NW3fNyKO-1LAAIJ-5}\\{NW3fNyKO-1LAAIJ-6}\\{NW3fNyKO-1LAAIJ-7}\\{NW3fNyKO-1LAAIJ-8}\\{NW3fNyKO-1LAAIJ-9}\\{NW3fNyKO-1LAAIJ-A}}\nwused{\\{NW3fNyKO-3xdkHW-1}}\nwendcode{}\nwbegindocs{36}\nwdocspar
+\nwalsodefined{\\{NW3fNyKO-1LAAIJ-2}\\{NW3fNyKO-1LAAIJ-3}\\{NW3fNyKO-1LAAIJ-4}\\{NW3fNyKO-1LAAIJ-5}\\{NW3fNyKO-1LAAIJ-6}\\{NW3fNyKO-1LAAIJ-7}\\{NW3fNyKO-1LAAIJ-8}\\{NW3fNyKO-1LAAIJ-9}\\{NW3fNyKO-1LAAIJ-A}}\nwused{\\{NW3fNyKO-3xdkHW-1}}\nwendcode{}\nwbegindocs{34}\nwdocspar
 
 The {\Tt{}stale()\nwendquote} function finds all dependencies for a symbol
 and checks that the symbol is older than all of its dependents,
 and that all of its dependents are not stale.
 
-\nwenddocs{}\nwbegincode{37}\sublabel{NW3fNyKO-1LAAIJ-2}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-1LAAIJ-2}}}\moddef{support functions~{\nwtagstyle{}\subpageref{NW3fNyKO-1LAAIJ-1}}}\plusendmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-3xdkHW-1}}\nwprevnextdefs{NW3fNyKO-1LAAIJ-1}{NW3fNyKO-1LAAIJ-3}\nwenddeflinemarkup
+\nwenddocs{}\nwbegincode{35}\sublabel{NW3fNyKO-1LAAIJ-2}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-1LAAIJ-2}}}\moddef{support functions~{\nwtagstyle{}\subpageref{NW3fNyKO-1LAAIJ-1}}}\plusendmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-3xdkHW-1}}\nwprevnextdefs{NW3fNyKO-1LAAIJ-1}{NW3fNyKO-1LAAIJ-3}\nwenddeflinemarkup
 stale <- function(x) \{
     dependents <- deps(x)
     length(dependents) &&
         (any(age(x) < sapply(dependents, age)) || 
          any(sapply(dependents, stale)))
 \}
-\nwused{\\{NW3fNyKO-3xdkHW-1}}\nwendcode{}\nwbegindocs{38}\nwdocspar
+\nwused{\\{NW3fNyKO-3xdkHW-1}}\nwendcode{}\nwbegindocs{36}\nwdocspar
 
 The {\Tt{}staleWarnMsg()\nwendquote} function generates text for a warning message.
 
-\nwenddocs{}\nwbegincode{39}\sublabel{NW3fNyKO-1LAAIJ-3}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-1LAAIJ-3}}}\moddef{support functions~{\nwtagstyle{}\subpageref{NW3fNyKO-1LAAIJ-1}}}\plusendmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-3xdkHW-1}}\nwprevnextdefs{NW3fNyKO-1LAAIJ-2}{NW3fNyKO-1LAAIJ-4}\nwenddeflinemarkup
+\nwenddocs{}\nwbegincode{37}\sublabel{NW3fNyKO-1LAAIJ-3}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-1LAAIJ-3}}}\moddef{support functions~{\nwtagstyle{}\subpageref{NW3fNyKO-1LAAIJ-1}}}\plusendmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-3xdkHW-1}}\nwprevnextdefs{NW3fNyKO-1LAAIJ-2}{NW3fNyKO-1LAAIJ-4}\nwenddeflinemarkup
 staleWarnMsg <- function(deps) \{
     N <- length(deps)
     if (N == 1) \{
@@ -424,15 +457,15 @@ staleWarnMsg <- function(deps) \{
     \} else if (N == 2) \{
         paste0("Symbols '",
                paste(deps, collapse="' and '"),
-               "' are stale")
+               "' are stale!")
     \} else \{
         paste0("Symbols '",
                paste(paste(deps[-N], collapse="', '"),
                      deps[N], sep="', and '"),
-               "' are stale")
+               "' are stale!")
     \}
 \}
-\nwused{\\{NW3fNyKO-3xdkHW-1}}\nwendcode{}\nwbegindocs{40}\nwdocspar
+\nwused{\\{NW3fNyKO-3xdkHW-1}}\nwendcode{}\nwbegindocs{38}\nwdocspar
 
 \subsection{Parsing support functions}
 \label{sec:parsing-support-functions}
@@ -440,13 +473,13 @@ staleWarnMsg <- function(deps) \{
 An incomplete parse is detected when the result of the parse is an
 error that contains the string {\Tt{}"unexpected\ end\ of\ input"\nwendquote}.
 
-\nwenddocs{}\nwbegincode{41}\sublabel{NW3fNyKO-1LAAIJ-4}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-1LAAIJ-4}}}\moddef{support functions~{\nwtagstyle{}\subpageref{NW3fNyKO-1LAAIJ-1}}}\plusendmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-3xdkHW-1}}\nwprevnextdefs{NW3fNyKO-1LAAIJ-3}{NW3fNyKO-1LAAIJ-5}\nwenddeflinemarkup
-\nwlinkedidentc{incompleteParse}{NW3fNyKO-1LAAIJ-4} <-
-    function(e)
+\nwenddocs{}\nwbegincode{39}\sublabel{NW3fNyKO-1LAAIJ-4}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-1LAAIJ-4}}}\moddef{support functions~{\nwtagstyle{}\subpageref{NW3fNyKO-1LAAIJ-1}}}\plusendmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-3xdkHW-1}}\nwprevnextdefs{NW3fNyKO-1LAAIJ-3}{NW3fNyKO-1LAAIJ-5}\nwenddeflinemarkup
+\nwlinkedidentc{incompleteParse}{NW3fNyKO-1LAAIJ-4} <- function(e) \{
     (inherits(e, "error") &&
      grepl("unexpected end of input", e$message))
+\}
 \nwindexdefn{\nwixident{incompleteParse}}{incompleteParse}{NW3fNyKO-1LAAIJ-4}\eatline
-\nwused{\\{NW3fNyKO-3xdkHW-1}}\nwidentdefs{\\{{\nwixident{incompleteParse}}{incompleteParse}}}\nwendcode{}\nwbegindocs{42}\nwdocspar
+\nwused{\\{NW3fNyKO-3xdkHW-1}}\nwidentdefs{\\{{\nwixident{incompleteParse}}{incompleteParse}}}\nwendcode{}\nwbegindocs{40}\nwdocspar
 The most complicated support function is the one that handles the
 printing of error messages from parsing.  Because the parse is taking
 place using a character vector as input, the error messages produced
@@ -454,54 +487,51 @@ look rather different from those produced when the parser gets its
 input from the console.  This function transforms the error messages
 into that form.
 
-\nwenddocs{}\nwbegincode{43}\sublabel{NW3fNyKO-1LAAIJ-5}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-1LAAIJ-5}}}\moddef{support functions~{\nwtagstyle{}\subpageref{NW3fNyKO-1LAAIJ-1}}}\plusendmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-3xdkHW-1}}\nwprevnextdefs{NW3fNyKO-1LAAIJ-4}{NW3fNyKO-1LAAIJ-6}\nwenddeflinemarkup
-\nwlinkedidentc{handleParseError}{NW3fNyKO-1LAAIJ-5} <-
-    function(e) \{
-        msg = strsplit(conditionMessage(e), "\\n")[[1]]
-        errortxt = msg[1]
-        msg = gsub("[0-9]+: ", "", msg[-c(1, length(msg))])
-        msg = msg[length(msg) - 1:0]
-        if (length(msg) == 1)
-            msg = paste(" in: \\"", msg, "\\"\\n", sep = "")
-        else
-            msg = paste(" in:\\n\\"",
-                paste(msg, collapse = "\\n"),
-                "\\"\\n", sep = "")
-        cat("Error",
-            gsub("\\n.*", "",
-                 gsub("<text>:[0-9]+:[0-9]+", "",
-                      errortxt)),
-            msg, sep = "")
-    \}
+\nwenddocs{}\nwbegincode{41}\sublabel{NW3fNyKO-1LAAIJ-5}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-1LAAIJ-5}}}\moddef{support functions~{\nwtagstyle{}\subpageref{NW3fNyKO-1LAAIJ-1}}}\plusendmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-3xdkHW-1}}\nwprevnextdefs{NW3fNyKO-1LAAIJ-4}{NW3fNyKO-1LAAIJ-6}\nwenddeflinemarkup
+\nwlinkedidentc{handleParseError}{NW3fNyKO-1LAAIJ-5} <- function(e) \{
+    msg = strsplit(conditionMessage(e), "\\n")[[1]]
+    errortxt = msg[1]
+    msg = gsub("[0-9]+: ", "", msg[-c(1, length(msg))])
+    msg = msg[length(msg) - 1:0]
+    if (length(msg) == 1)
+        msg = paste(" in: \\"", msg, "\\"\\n", sep = "")
+    else
+        msg = paste(" in:\\n\\"",
+                    paste(msg, collapse = "\\n"),
+                    "\\"\\n", sep = "")
+    cat("Error",
+        gsub("\\n.*", "",
+             gsub("<text>:[0-9]+:[0-9]+", "",
+                  errortxt)),
+        msg, sep = "")
+\}
 \nwindexdefn{\nwixident{handleParseError}}{handleParseError}{NW3fNyKO-1LAAIJ-5}\eatline
-\nwused{\\{NW3fNyKO-3xdkHW-1}}\nwidentdefs{\\{{\nwixident{handleParseError}}{handleParseError}}}\nwendcode{}\nwbegindocs{44}\nwdocspar
+\nwused{\\{NW3fNyKO-3xdkHW-1}}\nwidentdefs{\\{{\nwixident{handleParseError}}{handleParseError}}}\nwendcode{}\nwbegindocs{42}\nwdocspar
 \subsection{Input-output support}
 \label{sec:input-output-support}
 
 The error messages produced during evaluation are easy to process.  We
 simply cat them to the output.
 
-\nwenddocs{}\nwbegincode{45}\sublabel{NW3fNyKO-1LAAIJ-6}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-1LAAIJ-6}}}\moddef{support functions~{\nwtagstyle{}\subpageref{NW3fNyKO-1LAAIJ-1}}}\plusendmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-3xdkHW-1}}\nwprevnextdefs{NW3fNyKO-1LAAIJ-5}{NW3fNyKO-1LAAIJ-7}\nwenddeflinemarkup
-\nwlinkedidentc{handleError}{NW3fNyKO-1LAAIJ-6} <-
-    function(e) \{
-        cat("Error in", deparse(conditionCall(e)),
-            ":", conditionMessage(e), "\\n")
-    \}
+\nwenddocs{}\nwbegincode{43}\sublabel{NW3fNyKO-1LAAIJ-6}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-1LAAIJ-6}}}\moddef{support functions~{\nwtagstyle{}\subpageref{NW3fNyKO-1LAAIJ-1}}}\plusendmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-3xdkHW-1}}\nwprevnextdefs{NW3fNyKO-1LAAIJ-5}{NW3fNyKO-1LAAIJ-7}\nwenddeflinemarkup
+\nwlinkedidentc{handleError}{NW3fNyKO-1LAAIJ-6} <- function(e) \{
+    cat("Error in", deparse(conditionCall(e)),
+        ":", conditionMessage(e), "\\n")
+\}
 \nwindexdefn{\nwixident{handleError}}{handleError}{NW3fNyKO-1LAAIJ-6}\eatline
-\nwused{\\{NW3fNyKO-3xdkHW-1}}\nwidentdefs{\\{{\nwixident{handleError}}{handleError}}}\nwendcode{}\nwbegindocs{46}\nwdocspar
+\nwused{\\{NW3fNyKO-3xdkHW-1}}\nwidentdefs{\\{{\nwixident{handleError}}{handleError}}}\nwendcode{}\nwbegindocs{44}\nwdocspar
 Printing the values that result from evaluating expressions has one
 wrinkle to it.  We have to check the visibility of the result and only
 print ``visible'' results.
 
-\nwenddocs{}\nwbegincode{47}\sublabel{NW3fNyKO-1LAAIJ-7}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-1LAAIJ-7}}}\moddef{support functions~{\nwtagstyle{}\subpageref{NW3fNyKO-1LAAIJ-1}}}\plusendmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-3xdkHW-1}}\nwprevnextdefs{NW3fNyKO-1LAAIJ-6}{NW3fNyKO-1LAAIJ-8}\nwenddeflinemarkup
-\nwlinkedidentc{handleValue}{NW3fNyKO-1LAAIJ-7} <-
-    function(e) \{
-        if (e$visible) \{
-            print(e$value)
-        \}
+\nwenddocs{}\nwbegincode{45}\sublabel{NW3fNyKO-1LAAIJ-7}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-1LAAIJ-7}}}\moddef{support functions~{\nwtagstyle{}\subpageref{NW3fNyKO-1LAAIJ-1}}}\plusendmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-3xdkHW-1}}\nwprevnextdefs{NW3fNyKO-1LAAIJ-6}{NW3fNyKO-1LAAIJ-8}\nwenddeflinemarkup
+\nwlinkedidentc{handleValue}{NW3fNyKO-1LAAIJ-7} <- function(e) \{
+    if (e$visible) \{
+        print(e$value)
     \}
+\}
 \nwindexdefn{\nwixident{handleValue}}{handleValue}{NW3fNyKO-1LAAIJ-7}\eatline
-\nwused{\\{NW3fNyKO-3xdkHW-1}}\nwidentdefs{\\{{\nwixident{handleValue}}{handleValue}}}\nwendcode{}\nwbegindocs{48}\nwdocspar
+\nwused{\\{NW3fNyKO-3xdkHW-1}}\nwidentdefs{\\{{\nwixident{handleValue}}{handleValue}}}\nwendcode{}\nwbegindocs{46}\nwdocspar
 \subsection{Warning support}
 \label{sec:warning-support}
 
@@ -521,18 +551,18 @@ variables manage the accumulation of error messages.
 \noindent
 The variables are initialised as follows.
 
-\nwenddocs{}\nwbegincode{49}\sublabel{NW3fNyKO-4ZejqA-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-4ZejqA-1}}}\moddef{warning state variables~{\nwtagstyle{}\subpageref{NW3fNyKO-4ZejqA-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-3xdkHW-1}}\nwenddeflinemarkup
+\nwenddocs{}\nwbegincode{47}\sublabel{NW3fNyKO-4ZejqA-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-4ZejqA-1}}}\moddef{warning state variables~{\nwtagstyle{}\subpageref{NW3fNyKO-4ZejqA-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-3xdkHW-1}}\nwenddeflinemarkup
 \nwlinkedidentc{warningCalls}{NW3fNyKO-4ZejqA-1} <- vector("list", 50)
 \nwlinkedidentc{warningMessages}{NW3fNyKO-4ZejqA-1} <- character(50)
 \nwlinkedidentc{nwarnings}{NW3fNyKO-4ZejqA-1} <- 0
 \nwlinkedidentc{renewwarnings}{NW3fNyKO-4ZejqA-1} <- TRUE
 \nwlinkedidentc{newwarnings}{NW3fNyKO-4ZejqA-1} <- FALSE
 \nwindexdefn{\nwixident{warningCalls}}{warningCalls}{NW3fNyKO-4ZejqA-1}\nwindexdefn{\nwixident{warningMessages}}{warningMessages}{NW3fNyKO-4ZejqA-1}\nwindexdefn{\nwixident{nwarnings}}{nwarnings}{NW3fNyKO-4ZejqA-1}\nwindexdefn{\nwixident{renewwarnings}}{renewwarnings}{NW3fNyKO-4ZejqA-1}\nwindexdefn{\nwixident{newwarnings}}{newwarnings}{NW3fNyKO-4ZejqA-1}\eatline
-\nwused{\\{NW3fNyKO-3xdkHW-1}}\nwidentdefs{\\{{\nwixident{newwarnings}}{newwarnings}}\\{{\nwixident{nwarnings}}{nwarnings}}\\{{\nwixident{renewwarnings}}{renewwarnings}}\\{{\nwixident{warningCalls}}{warningCalls}}\\{{\nwixident{warningMessages}}{warningMessages}}}\nwendcode{}\nwbegindocs{50}\nwdocspar
+\nwused{\\{NW3fNyKO-3xdkHW-1}}\nwidentdefs{\\{{\nwixident{newwarnings}}{newwarnings}}\\{{\nwixident{nwarnings}}{nwarnings}}\\{{\nwixident{renewwarnings}}{renewwarnings}}\\{{\nwixident{warningCalls}}{warningCalls}}\\{{\nwixident{warningMessages}}{warningMessages}}}\nwendcode{}\nwbegindocs{48}\nwdocspar
 Warnings are trapped by the following two functions.  The effect is to
 simply add warnings to the accumulated list of warnings and then call
 the built-in {\Tt{}muffleWarning()\nwendquote} restart.
-\nwenddocs{}\nwbegincode{51}\sublabel{NW3fNyKO-1LAAIJ-8}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-1LAAIJ-8}}}\moddef{support functions~{\nwtagstyle{}\subpageref{NW3fNyKO-1LAAIJ-1}}}\plusendmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-3xdkHW-1}}\nwprevnextdefs{NW3fNyKO-1LAAIJ-7}{NW3fNyKO-1LAAIJ-9}\nwenddeflinemarkup
+\nwenddocs{}\nwbegincode{49}\sublabel{NW3fNyKO-1LAAIJ-8}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-1LAAIJ-8}}}\moddef{support functions~{\nwtagstyle{}\subpageref{NW3fNyKO-1LAAIJ-1}}}\plusendmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-3xdkHW-1}}\nwprevnextdefs{NW3fNyKO-1LAAIJ-7}{NW3fNyKO-1LAAIJ-9}\nwenddeflinemarkup
 warningHandler <- function(w) \{
     \nwlinkedidentc{newwarnings}{NW3fNyKO-4ZejqA-1} <<- TRUE
     if (\nwlinkedidentc{renewwarnings}{NW3fNyKO-4ZejqA-1}) \{
@@ -547,63 +577,105 @@ warningHandler <- function(w) \{
     \}
     invokeRestart("muffleWarning")
 \}        
-\nwlinkedidentc{tryCatchWithWarnings}{NW3fNyKO-1LAAIJ-8} <- function(expr)
+\nwlinkedidentc{tryCatchWithWarnings}{NW3fNyKO-1LAAIJ-8} <- function(expr) \{
     withCallingHandlers(tryCatch(expr,
-            error = function(e) e),
-        warning = warningHandler)
+                                 error = function(e) e),
+                        warning = warningHandler)
+\}
 \nwindexdefn{\nwixident{tryCatchWithWarnings}}{tryCatchWithWarnings}{NW3fNyKO-1LAAIJ-8}\eatline
-\nwused{\\{NW3fNyKO-3xdkHW-1}}\nwidentdefs{\\{{\nwixident{tryCatchWithWarnings}}{tryCatchWithWarnings}}}\nwidentuses{\\{{\nwixident{newwarnings}}{newwarnings}}\\{{\nwixident{nwarnings}}{nwarnings}}\\{{\nwixident{renewwarnings}}{renewwarnings}}\\{{\nwixident{warningCalls}}{warningCalls}}\\{{\nwixident{warningMessages}}{warningMessages}}}\nwindexuse{\nwixident{newwarnings}}{newwarnings}{NW3fNyKO-1LAAIJ-8}\nwindexuse{\nwixident{nwarnings}}{nwarnings}{NW3fNyKO-1LAAIJ-8}\nwindexuse{\nwixident{renewwarnings}}{renewwarnings}{NW3fNyKO-1LAAIJ-8}\nwindexuse{\nwixident{warningCalls}}{warningCalls}{NW3fNyKO-1LAAIJ-8}\nwindexuse{\nwixident{warningMessages}}{warningMessages}{NW3fNyKO-1LAAIJ-8}\nwendcode{}\nwbegindocs{52}\nwdocspar
+\nwused{\\{NW3fNyKO-3xdkHW-1}}\nwidentdefs{\\{{\nwixident{tryCatchWithWarnings}}{tryCatchWithWarnings}}}\nwidentuses{\\{{\nwixident{newwarnings}}{newwarnings}}\\{{\nwixident{nwarnings}}{nwarnings}}\\{{\nwixident{renewwarnings}}{renewwarnings}}\\{{\nwixident{warningCalls}}{warningCalls}}\\{{\nwixident{warningMessages}}{warningMessages}}}\nwindexuse{\nwixident{newwarnings}}{newwarnings}{NW3fNyKO-1LAAIJ-8}\nwindexuse{\nwixident{nwarnings}}{nwarnings}{NW3fNyKO-1LAAIJ-8}\nwindexuse{\nwixident{renewwarnings}}{renewwarnings}{NW3fNyKO-1LAAIJ-8}\nwindexuse{\nwixident{warningCalls}}{warningCalls}{NW3fNyKO-1LAAIJ-8}\nwindexuse{\nwixident{warningMessages}}{warningMessages}{NW3fNyKO-1LAAIJ-8}\nwendcode{}\nwbegindocs{50}\nwdocspar
 The {\Tt{}displayWarnings()\nwendquote} function is used to display warnings at the
 end of an evaluation.  If there are 10 or fewer messages they are
 displayed.  If there are more than 10 messages, the user is told to
 inspect them with {\Tt{}warnings()\nwendquote}.  Only the first 50 messages are
 stored.
 
-\nwenddocs{}\nwbegincode{53}\sublabel{NW3fNyKO-1LAAIJ-9}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-1LAAIJ-9}}}\moddef{support functions~{\nwtagstyle{}\subpageref{NW3fNyKO-1LAAIJ-1}}}\plusendmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-3xdkHW-1}}\nwprevnextdefs{NW3fNyKO-1LAAIJ-8}{NW3fNyKO-1LAAIJ-A}\nwenddeflinemarkup
-\nwlinkedidentc{displayWarnings}{NW3fNyKO-1LAAIJ-9} <-
-    function(n) \{
-        if (n <= 10)
-            print(warnings())
-        else if (n < 50) \{
-            cat("There were",
-                \nwlinkedidentc{nwarnings}{NW3fNyKO-4ZejqA-1},
-                "warnings (use warnings() to see them)\\n")
-        \}
-        else
-            cat("There were 50 or more warnings",
-                "(use warnings() to see the first 50)\\n")
+\nwenddocs{}\nwbegincode{51}\sublabel{NW3fNyKO-1LAAIJ-9}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-1LAAIJ-9}}}\moddef{support functions~{\nwtagstyle{}\subpageref{NW3fNyKO-1LAAIJ-1}}}\plusendmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-3xdkHW-1}}\nwprevnextdefs{NW3fNyKO-1LAAIJ-8}{NW3fNyKO-1LAAIJ-A}\nwenddeflinemarkup
+\nwlinkedidentc{displayWarnings}{NW3fNyKO-1LAAIJ-9} <- function(n) \{
+    if (n <= 10) \{
+        print(warnings())
+    \} else if (n < 50) \{
+        cat("There were",
+            \nwlinkedidentc{nwarnings}{NW3fNyKO-4ZejqA-1},
+            "warnings (use warnings() to see them)\\n")
+    \} else \{
+        cat("There were 50 or more warnings",
+            "(use warnings() to see the first 50)\\n")
     \}
+\}
 \nwindexdefn{\nwixident{displayWarnings}}{displayWarnings}{NW3fNyKO-1LAAIJ-9}\eatline
-\nwused{\\{NW3fNyKO-3xdkHW-1}}\nwidentdefs{\\{{\nwixident{displayWarnings}}{displayWarnings}}}\nwidentuses{\\{{\nwixident{nwarnings}}{nwarnings}}}\nwindexuse{\nwixident{nwarnings}}{nwarnings}{NW3fNyKO-1LAAIJ-9}\nwendcode{}\nwbegindocs{54}\nwdocspar
+\nwused{\\{NW3fNyKO-3xdkHW-1}}\nwidentdefs{\\{{\nwixident{displayWarnings}}{displayWarnings}}}\nwidentuses{\\{{\nwixident{nwarnings}}{nwarnings}}}\nwindexuse{\nwixident{nwarnings}}{nwarnings}{NW3fNyKO-1LAAIJ-9}\nwendcode{}\nwbegindocs{52}\nwdocspar
 \subsection{Debugging support} 
 \label{sec:debugging}
 
 If the {\Tt{}debug\nwendquote} flag is set to {\Tt{}TRUE\nwendquote} a variety of 
 debugging information is spewed out for each expression.
 
-\nwenddocs{}\nwbegincode{55}\sublabel{NW3fNyKO-2ZXfip-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-2ZXfip-1}}}\moddef{debug globals~{\nwtagstyle{}\subpageref{NW3fNyKO-2ZXfip-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-24swck-1}}\nwenddeflinemarkup
+\nwenddocs{}\nwbegincode{53}\sublabel{NW3fNyKO-2ZXfip-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-2ZXfip-1}}}\moddef{debug globals~{\nwtagstyle{}\subpageref{NW3fNyKO-2ZXfip-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-24swck-1}}\nwenddeflinemarkup
 if (debug) \{
     cat(paste("globals: ", paste(vars, collapse=", "), "\\n"))
     cat(paste("tracked: ", paste(tracked, collapse=", "), "\\n"))
 \}
-\nwused{\\{NW3fNyKO-24swck-1}}\nwendcode{}\nwbegindocs{56}\nwdocspar
+\nwused{\\{NW3fNyKO-24swck-1}}\nwendcode{}\nwbegindocs{54}\nwdocspar
 
-\nwenddocs{}\nwbegincode{57}\sublabel{NW3fNyKO-4Fird-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-4Fird-1}}}\moddef{debug inputs and outputs~{\nwtagstyle{}\subpageref{NW3fNyKO-4Fird-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-41HQ4C-1}}\nwenddeflinemarkup
+\nwenddocs{}\nwbegincode{55}\sublabel{NW3fNyKO-4Fird-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-4Fird-1}}}\moddef{debug inputs and outputs~{\nwtagstyle{}\subpageref{NW3fNyKO-4Fird-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-41HQ4C-1}}\nwenddeflinemarkup
 if (debug) \{
     cat(paste("inputs: ", paste(inputs, collapse=", "), "\\n"))
     cat(paste("outputs: ", paste(outputs, collapse=", "), "\\n"))
     cat(paste("updates: ", paste(updates, collapse=", "), "\\n"))
 \}
-\nwused{\\{NW3fNyKO-41HQ4C-1}}\nwendcode{}\nwbegindocs{58}\nwdocspar
+\nwused{\\{NW3fNyKO-41HQ4C-1}}\nwendcode{}\nwbegindocs{56}\nwdocspar
 
-\nwenddocs{}\nwbegincode{59}\sublabel{NW3fNyKO-4RCJKm-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-4RCJKm-1}}}\moddef{debug time and dependency databases~{\nwtagstyle{}\subpageref{NW3fNyKO-4RCJKm-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-41HQ4C-1}}\nwenddeflinemarkup
+\nwenddocs{}\nwbegincode{57}\sublabel{NW3fNyKO-4RCJKm-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-4RCJKm-1}}}\moddef{debug time and dependency databases~{\nwtagstyle{}\subpageref{NW3fNyKO-4RCJKm-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-41HQ4C-1}}\nwenddeflinemarkup
 if (debug) \{
     cat("Time stamp database:\\n")
     print(sapply(ls(timeDB), get, envir=timeDB))
     cat("Dependencies database:\\n")
     print(sapply(ls(depDB), get, envir=depDB))
 \}
-\nwused{\\{NW3fNyKO-41HQ4C-1}}\nwendcode{}\nwbegindocs{60}\nwdocspar
+\nwused{\\{NW3fNyKO-41HQ4C-1}}\nwendcode{}\nwbegindocs{58}\nwdocspar
+
+\subsection{Batch mode}
+
+If the {\Tt{}infile\nwendquote} argument to {\Tt{}safemode()\nwendquote} is non-{\Tt{}NULL\nwendquote},
+we open a file to read from (rather than reading from the command line).
+
+\nwenddocs{}\nwbegincode{59}\sublabel{NW3fNyKO-3M0wdx-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-3M0wdx-1}}}\moddef{init batch mode~{\nwtagstyle{}\subpageref{NW3fNyKO-3M0wdx-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-2jP4FB-1}}\nwenddeflinemarkup
+con <- file(infile, "r")
+\nwused{\\{NW3fNyKO-2jP4FB-1}}\nwendcode{}\nwbegindocs{60}\nwdocspar
+
+In batch mode, we read from a connection rather than from the command line.
+
+\nwenddocs{}\nwbegincode{61}\sublabel{NW3fNyKO-4Qk14X-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-4Qk14X-1}}}\moddef{batch read~{\nwtagstyle{}\subpageref{NW3fNyKO-4Qk14X-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-XzPhD-1}}\nwenddeflinemarkup
+\nwlinkedidentc{cmd}{NW3fNyKO-2jP4FB-1} <- c(\nwlinkedidentc{cmd}{NW3fNyKO-2jP4FB-1}, readLines(con, n=1))
+\nwused{\\{NW3fNyKO-XzPhD-1}}\nwidentuses{\\{{\nwixident{cmd}}{cmd}}}\nwindexuse{\nwixident{cmd}}{cmd}{NW3fNyKO-4Qk14X-1}\nwendcode{}\nwbegindocs{62}\nwdocspar
+
+In batch mode, comments are echoed to stdout.
+
+\nwenddocs{}\nwbegincode{63}\sublabel{NW3fNyKO-1r17xi-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-1r17xi-1}}}\moddef{batch comment~{\nwtagstyle{}\subpageref{NW3fNyKO-1r17xi-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-XzPhD-1}}\nwenddeflinemarkup
+cat(paste0("safe> ", \nwlinkedidentc{cmd}{NW3fNyKO-2jP4FB-1}), "\\n")
+\nwused{\\{NW3fNyKO-XzPhD-1}}\nwidentuses{\\{{\nwixident{cmd}}{cmd}}}\nwindexuse{\nwixident{cmd}}{cmd}{NW3fNyKO-1r17xi-1}\nwendcode{}\nwbegindocs{64}\nwdocspar
+
+In batch mode, blank lines are echoed to stdout.
+
+\nwenddocs{}\nwbegincode{65}\sublabel{NW3fNyKO-VjREX-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-VjREX-1}}}\moddef{batch blank line~{\nwtagstyle{}\subpageref{NW3fNyKO-VjREX-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-3UyNT8-1}}\nwenddeflinemarkup
+cat("\\n")
+\nwused{\\{NW3fNyKO-3UyNT8-1}}\nwendcode{}\nwbegindocs{66}\nwdocspar
+
+In batch mode, we echo the expression text to stdout.
+
+\nwenddocs{}\nwbegincode{67}\sublabel{NW3fNyKO-2EECxy-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-2EECxy-1}}}\moddef{batch expression~{\nwtagstyle{}\subpageref{NW3fNyKO-2EECxy-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-4X48TB-1}}\nwenddeflinemarkup
+cat(paste0(c("safe> ",
+             rep("safe+ ",
+                 max(0, length(code) - 1))),
+           code), sep="\\n")
+\nwused{\\{NW3fNyKO-4X48TB-1}}\nwendcode{}\nwbegindocs{68}\nwdocspar
+
+In batch mode, we must close the input connection.
+
+\nwenddocs{}\nwbegincode{69}\sublabel{NW3fNyKO-1ObEmC-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-1ObEmC-1}}}\moddef{batch shut down~{\nwtagstyle{}\subpageref{NW3fNyKO-1ObEmC-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-2jP4FB-1}}\nwenddeflinemarkup
+close(con)
+\nwused{\\{NW3fNyKO-2jP4FB-1}}\nwendcode{}\nwbegindocs{70}\nwdocspar
 
 \subsection{Miscellany}
 \label{sec:miscellany}
@@ -613,18 +685,18 @@ typed {\Tt{}q()\nwendquote} at the command prompt.  It is rather easy to defeat
 this.  For example, typing {\Tt{}(q())\nwendquote} will cause an immediate exit
 from R.
 
-\nwenddocs{}\nwbegincode{61}\sublabel{NW3fNyKO-1LAAIJ-A}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-1LAAIJ-A}}}\moddef{support functions~{\nwtagstyle{}\subpageref{NW3fNyKO-1LAAIJ-1}}}\plusendmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-3xdkHW-1}}\nwprevnextdefs{NW3fNyKO-1LAAIJ-9}{\relax}\nwenddeflinemarkup
-\nwlinkedidentc{isQuitCall}{NW3fNyKO-1LAAIJ-A} <-
-    function(e)
+\nwenddocs{}\nwbegincode{71}\sublabel{NW3fNyKO-1LAAIJ-A}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-1LAAIJ-A}}}\moddef{support functions~{\nwtagstyle{}\subpageref{NW3fNyKO-1LAAIJ-1}}}\plusendmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-3xdkHW-1}}\nwprevnextdefs{NW3fNyKO-1LAAIJ-9}{\relax}\nwenddeflinemarkup
+\nwlinkedidentc{isQuitCall}{NW3fNyKO-1LAAIJ-A} <- function(e) \{
     (!inherits(e, "error") &&
-     length(e) == 1 &&
-     deparse(e[[1]], nlines = 1) == "q()")
+      length(e) == 1 &&
+      deparse(e[[1]], nlines = 1) == "q()")
+\}
 \nwindexdefn{\nwixident{isQuitCall}}{isQuitCall}{NW3fNyKO-1LAAIJ-A}\eatline
-\nwused{\\{NW3fNyKO-3xdkHW-1}}\nwidentdefs{\\{{\nwixident{isQuitCall}}{isQuitCall}}}\nwendcode{}\nwbegindocs{62}\nwdocspar
+\nwused{\\{NW3fNyKO-3xdkHW-1}}\nwidentdefs{\\{{\nwixident{isQuitCall}}{isQuitCall}}}\nwendcode{}\nwbegindocs{72}\nwdocspar
 \subsection{Comments and copyright}
 \label{sec:comments-and-copyright}
 
-\nwenddocs{}\nwbegincode{63}\sublabel{NW3fNyKO-4FQ1cJ-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-4FQ1cJ-1}}}\moddef{comments-and-copyright~{\nwtagstyle{}\subpageref{NW3fNyKO-4FQ1cJ-1}}}\endmoddef\let\nwnotused=\nwoutput{}\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-3xdkHW-1}}\nwenddeflinemarkup
+\nwenddocs{}\nwbegincode{73}\sublabel{NW3fNyKO-4FQ1cJ-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-4FQ1cJ-1}}}\moddef{comments-and-copyright~{\nwtagstyle{}\subpageref{NW3fNyKO-4FQ1cJ-1}}}\endmoddef\let\nwnotused=\nwoutput{}\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-3xdkHW-1}}\nwenddeflinemarkup
 ###  Original code and documentation copyright Ross Ihaka, 2011
 ### 
 ###  Modifications copyright Paul Murrell, 2015
@@ -652,6 +724,11 @@ from R.
 
 \nwused{\\{NW3fNyKO-3xdkHW-1}}\nwendcode{}
 
+\nwixlogsorted{c}{{batch blank line}{NW3fNyKO-VjREX-1}{\nwixu{NW3fNyKO-3UyNT8-1}\nwixd{NW3fNyKO-VjREX-1}}}%
+\nwixlogsorted{c}{{batch comment}{NW3fNyKO-1r17xi-1}{\nwixu{NW3fNyKO-XzPhD-1}\nwixd{NW3fNyKO-1r17xi-1}}}%
+\nwixlogsorted{c}{{batch expression}{NW3fNyKO-2EECxy-1}{\nwixu{NW3fNyKO-4X48TB-1}\nwixd{NW3fNyKO-2EECxy-1}}}%
+\nwixlogsorted{c}{{batch read}{NW3fNyKO-4Qk14X-1}{\nwixu{NW3fNyKO-XzPhD-1}\nwixd{NW3fNyKO-4Qk14X-1}}}%
+\nwixlogsorted{c}{{batch shut down}{NW3fNyKO-1ObEmC-1}{\nwixu{NW3fNyKO-2jP4FB-1}\nwixd{NW3fNyKO-1ObEmC-1}}}%
 \nwixlogsorted{c}{{call the read-eval-print-loop}{NW3fNyKO-nYuTh-1}{\nwixu{NW3fNyKO-or39s-1}\nwixd{NW3fNyKO-nYuTh-1}}}%
 \nwixlogsorted{c}{{check for stale symbols in expression}{NW3fNyKO-1i5iWR-1}{\nwixu{NW3fNyKO-4X48TB-1}\nwixd{NW3fNyKO-1i5iWR-1}}}%
 \nwixlogsorted{c}{{comments-and-copyright}{NW3fNyKO-4FQ1cJ-1}{\nwixu{NW3fNyKO-3xdkHW-1}\nwixd{NW3fNyKO-4FQ1cJ-1}}}%
@@ -660,14 +737,14 @@ from R.
 \nwixlogsorted{c}{{debug time and dependency databases}{NW3fNyKO-4RCJKm-1}{\nwixu{NW3fNyKO-41HQ4C-1}\nwixd{NW3fNyKO-4RCJKm-1}}}%
 \nwixlogsorted{c}{{determine tracked symbols in expression}{NW3fNyKO-24swck-1}{\nwixu{NW3fNyKO-4X48TB-1}\nwixd{NW3fNyKO-24swck-1}}}%
 \nwixlogsorted{c}{{evaluate expression in safe mode}{NW3fNyKO-4X48TB-1}{\nwixu{NW3fNyKO-ujlbC-1}\nwixd{NW3fNyKO-4X48TB-1}}}%
-\nwixlogsorted{c}{{handle special expression cases}{NW3fNyKO-3UyNT8-1}{\nwixu{NW3fNyKO-42roNn-1}\nwixd{NW3fNyKO-3UyNT8-1}}}%
-\nwixlogsorted{c}{{handle the general expression case}{NW3fNyKO-ujlbC-1}{\nwixu{NW3fNyKO-42roNn-1}\nwixd{NW3fNyKO-ujlbC-1}}}%
+\nwixlogsorted{c}{{handle special expression cases}{NW3fNyKO-3UyNT8-1}{\nwixu{NW3fNyKO-3mTANZ-1}\nwixd{NW3fNyKO-3UyNT8-1}}}%
+\nwixlogsorted{c}{{handle the expression}{NW3fNyKO-3mTANZ-1}{\nwixu{NW3fNyKO-N1orb-1}\nwixd{NW3fNyKO-3mTANZ-1}}}%
+\nwixlogsorted{c}{{handle the general expression case}{NW3fNyKO-ujlbC-1}{\nwixu{NW3fNyKO-3mTANZ-1}\nwixd{NW3fNyKO-ujlbC-1}}}%
 \nwixlogsorted{c}{{handle the results of the parse}{NW3fNyKO-N1orb-1}{\nwixu{NW3fNyKO-XzPhD-1}\nwixd{NW3fNyKO-N1orb-1}}}%
-\nwixlogsorted{c}{{if there was an error deal with it}{NW3fNyKO-KMkqD-1}{\nwixu{NW3fNyKO-N1orb-1}\nwixd{NW3fNyKO-KMkqD-1}}}%
+\nwixlogsorted{c}{{init batch mode}{NW3fNyKO-3M0wdx-1}{\nwixu{NW3fNyKO-2jP4FB-1}\nwixd{NW3fNyKO-3M0wdx-1}}}%
 \nwixlogsorted{c}{{initialisation}{NW3fNyKO-3GtYCJ-1}{\nwixu{NW3fNyKO-3xdkHW-1}\nwixd{NW3fNyKO-3GtYCJ-1}}}%
 \nwixlogsorted{c}{{interrupt catching}{NW3fNyKO-1uMRLP-1}{\nwixu{NW3fNyKO-2jP4FB-1}\nwixd{NW3fNyKO-1uMRLP-1}}}%
 \nwixlogsorted{c}{{main function}{NW3fNyKO-or39s-1}{\nwixu{NW3fNyKO-3xdkHW-1}\nwixd{NW3fNyKO-or39s-1}}}%
-\nwixlogsorted{c}{{otherwise handle the expression}{NW3fNyKO-42roNn-1}{\nwixu{NW3fNyKO-N1orb-1}\nwixd{NW3fNyKO-42roNn-1}}}%
 \nwixlogsorted{c}{{parse and evaluate expressions}{NW3fNyKO-XzPhD-1}{\nwixu{NW3fNyKO-1uMRLP-1}\nwixd{NW3fNyKO-XzPhD-1}}}%
 \nwixlogsorted{c}{{read-eval-print loop}{NW3fNyKO-2jP4FB-1}{\nwixu{NW3fNyKO-3xdkHW-1}\nwixd{NW3fNyKO-2jP4FB-1}}}%
 \nwixlogsorted{c}{{record time stamps and dependencies}{NW3fNyKO-41HQ4C-1}{\nwixu{NW3fNyKO-4X48TB-1}\nwixd{NW3fNyKO-41HQ4C-1}}}%
@@ -690,7 +767,7 @@ from R.
 \nwixlogsorted{i}{{\nwixident{tryCatchWithWarnings}}{tryCatchWithWarnings}}%
 \nwixlogsorted{i}{{\nwixident{warningCalls}}{warningCalls}}%
 \nwixlogsorted{i}{{\nwixident{warningMessages}}{warningMessages}}%
-\nwbegindocs{64}\nwdocspar
+\nwbegindocs{74}\nwdocspar
 
 \newpage
 \section*{Chunk Index}

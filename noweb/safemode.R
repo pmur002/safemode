@@ -34,7 +34,6 @@ safemode <- local({
     age <- function(x) {
         get(x, timeDB, inherits=FALSE)
     }
-
     deps <- function(x) {
         get(x, depDB, inherits=FALSE)
     }    
@@ -51,47 +50,44 @@ safemode <- local({
         } else if (N == 2) {
             paste0("Symbols '",
                    paste(deps, collapse="' and '"),
-                   "' are stale")
+                   "' are stale!")
         } else {
             paste0("Symbols '",
                    paste(paste(deps[-N], collapse="', '"),
                          deps[N], sep="', and '"),
-                   "' are stale")
+                   "' are stale!")
         }
     }
-    incompleteParse <-
-        function(e)
+    incompleteParse <- function(e) {
         (inherits(e, "error") &&
          grepl("unexpected end of input", e$message))
-    handleParseError <-
-        function(e) {
-            msg = strsplit(conditionMessage(e), "\n")[[1]]
-            errortxt = msg[1]
-            msg = gsub("[0-9]+: ", "", msg[-c(1, length(msg))])
-            msg = msg[length(msg) - 1:0]
-            if (length(msg) == 1)
-                msg = paste(" in: \"", msg, "\"\n", sep = "")
-            else
-                msg = paste(" in:\n\"",
-                    paste(msg, collapse = "\n"),
-                    "\"\n", sep = "")
-            cat("Error",
-                gsub("\n.*", "",
-                     gsub("<text>:[0-9]+:[0-9]+", "",
-                          errortxt)),
-                msg, sep = "")
+    }
+    handleParseError <- function(e) {
+        msg = strsplit(conditionMessage(e), "\n")[[1]]
+        errortxt = msg[1]
+        msg = gsub("[0-9]+: ", "", msg[-c(1, length(msg))])
+        msg = msg[length(msg) - 1:0]
+        if (length(msg) == 1)
+            msg = paste(" in: \"", msg, "\"\n", sep = "")
+        else
+            msg = paste(" in:\n\"",
+                        paste(msg, collapse = "\n"),
+                        "\"\n", sep = "")
+        cat("Error",
+            gsub("\n.*", "",
+                 gsub("<text>:[0-9]+:[0-9]+", "",
+                      errortxt)),
+            msg, sep = "")
+    }
+    handleError <- function(e) {
+        cat("Error in", deparse(conditionCall(e)),
+            ":", conditionMessage(e), "\n")
+    }
+    handleValue <- function(e) {
+        if (e$visible) {
+            print(e$value)
         }
-    handleError <-
-        function(e) {
-            cat("Error in", deparse(conditionCall(e)),
-                ":", conditionMessage(e), "\n")
-        }
-    handleValue <-
-        function(e) {
-            if (e$visible) {
-                print(e$value)
-            }
-        }
+    }
     warningHandler <- function(w) {
         newwarnings <<- TRUE
         if (renewwarnings) {
@@ -106,142 +102,171 @@ safemode <- local({
         }
         invokeRestart("muffleWarning")
     }        
-    tryCatchWithWarnings <- function(expr)
+    tryCatchWithWarnings <- function(expr) {
         withCallingHandlers(tryCatch(expr,
-                error = function(e) e),
-            warning = warningHandler)
-    displayWarnings <-
-        function(n) {
-            if (n <= 10)
-                print(warnings())
-            else if (n < 50) {
-                cat("There were",
-                    nwarnings,
-                    "warnings (use warnings() to see them)\n")
-            }
-            else
-                cat("There were 50 or more warnings",
-                    "(use warnings() to see the first 50)\n")
+                                     error = function(e) e),
+                            warning = warningHandler)
+    }
+    displayWarnings <- function(n) {
+        if (n <= 10) {
+            print(warnings())
+        } else if (n < 50) {
+            cat("There were",
+                nwarnings,
+                "warnings (use warnings() to see them)\n")
+        } else {
+            cat("There were 50 or more warnings",
+                "(use warnings() to see the first 50)\n")
         }
-    isQuitCall <-
-        function(e)
+    }
+    isQuitCall <- function(e) {
         (!inherits(e, "error") &&
-         length(e) == 1 &&
-         deparse(e[[1]], nlines = 1) == "q()")
-    repl <- function(env, debug) {
-        prompt = "safe> "
-        cmd = character()
+          length(e) == 1 &&
+          deparse(e[[1]], nlines = 1) == "q()")
+    }
+    repl <- function(env, debug, infile) {
+        prompt <- "safe> "
+        cmd <- character()
+        if (!is.null(infile)) {
+            batch <- TRUE
+            con <- file(infile, "r")
+        }
         repeat {
-            ans <- tryCatch(repeat {
+            ans <- tryCatch(
 	        repeat {
-		    cmd <- c(cmd, readline(prompt))
-		    ans <- tryCatch(parse(text = cmd),
-		        error = function(e) e)
-		    if (inherits(ans, "error")) {
-		        if (incompleteParse((ans))) {
-		            prompt <- "safe+ "
+	            repeat {
+		        if (batch) {
+		            cmd <- c(cmd, readLines(con, n=1))
+		        } else {
+		            cmd <- c(cmd, readline(prompt))
 		        }
-		        else {
-		            handleParseError(ans)
-		            prompt <- "safe> "
+		        if (grepl("^#", cmd)) {
+		            if (batch) {
+		                cat(paste0("safe> ", cmd), "\n")
+		            }
 		            cmd <- character()
+		            break
 		        }
-		    }
-		    else {
-		        if (length(ans) == 0) {
-			    break
-			}
-			else if (isQuitCall(ans)) {
-			    return()
-			}
-			else if (grepl("^safemode\\(",
-			               deparse(ans[[1]], nlines = 1))) {
-			    cat("Error: You can't call safemode() while in \"safe mode\"\n")
-			    break
-			}
-		        else {
-			    renewwarnings <<- TRUE
-			    newwarnings <<- FALSE
-			    for(e in ans) {
-			        dummy <- function() {}
-				body(dummy) <- e
-				vars <- findGlobals(dummy)
-				tracked <- vars[vars %in% ls(timeDB)]
-				if (debug) {
-				    cat(paste("globals: ", paste(vars, collapse=", "), "\n"))
-				    cat(paste("tracked: ", paste(tracked, collapse=", "), "\n"))
-				}
-				if (length(tracked) > 0) {
-				    staleDeps <- sapply(tracked, stale)
-				    if (any(staleDeps))
-				        withCallingHandlers(warning(staleWarnMsg(tracked[staleDeps])),
-				                            warning = warningHandler)
-				}
-				e = tryCatchWithWarnings(withVisible(eval(e,
-				                                          envir = env)))
-				if (inherits(e, "error")) {
-				    handleError(e)
-				} else {
-				    handleValue(e)
-				    # test for whether expression was an assignment
-				    sc <- readScript("", txt=cmd)
-				    info <- getInputs(sc)
-				    inputs <- info[[1]]@inputs
-				    outputs <- info[[1]]@outputs
-				    updates <- info[[1]]@updates
+		        ans <- tryCatch(parse(text = cmd), error = function(e) e)
+		        if (inherits(ans, "error")) {
+			    if (incompleteParse((ans))) {
+			        prompt <- "safe+ "
+			    } else {
+			        handleParseError(ans)
+			        prompt <- "safe> "
+			        cmd <- character()
+			    }
+			} else {
+			    special <- TRUE
+			    if (length(ans) == 0) {
+			        if (batch) {
+			            cat("\n")
+			        }
+			        cmd <- character()
+			        break
+			    } else if (isQuitCall(ans)) {
+			        return()
+			    } else if (grepl("^safemode\\(",
+			                   deparse(ans[[1]], nlines = 1))) {
+			        cat("Error: You can't call safemode() while in \"safe mode\"\n")
+			        break
+			    } else {
+			        special <- FALSE
+			    }
+			    if (!special) {
+			        renewwarnings <<- TRUE
+			        newwarnings <<- FALSE
+			        for(e in ans) {
+			            dummy <- function() {}
+				    body(dummy) <- e
+				    vars <- findGlobals(dummy)
+				    tracked <- vars[vars %in% ls(timeDB)]
 				    if (debug) {
-				        cat(paste("inputs: ", paste(inputs, collapse=", "), "\n"))
-				        cat(paste("outputs: ", paste(outputs, collapse=", "), "\n"))
-				        cat(paste("updates: ", paste(updates, collapse=", "), "\n"))
+				        cat(paste("globals: ", paste(vars, collapse=", "), "\n"))
+				        cat(paste("tracked: ", paste(tracked, collapse=", "), "\n"))
 				    }
-				    assignment <- FALSE
-				    if (length(outputs) > 0) {
-				        if (length(outputs) > 1 || length(updates) > 0)
-				            stop("I did not think this could happen")
-				        symbol <- outputs
-				        assignment <- TRUE
-				    } else if (length(updates) > 0) {
-				        symbol <- updates
-				        assignment <- TRUE    
+				    if (length(tracked) > 0) {
+				        staleDeps <- sapply(tracked, stale)
+				        if (any(staleDeps)) {
+				            withCallingHandlers(warning(staleWarnMsg(tracked[staleDeps])),
+				                                warning = warningHandler)
+				        }
 				    }
-				    if (assignment) {
-				        assign(symbol, as.numeric(Sys.time()), envir=timeDB)
-				        assign(symbol, tracked, envir=depDB)
-				        if (debug) {
-					    cat("Time stamp database:\n")
-					    print(sapply(ls(timeDB), get, envir=timeDB))
-					    cat("Dependencies database:\n")
-					    print(sapply(ls(depDB), get, envir=depDB))
+				    code <- deparse(e)                                 
+				    e <- tryCatchWithWarnings(withVisible(eval(e,
+				                                               envir = env)))
+				    if (inherits(e, "error")) {
+				        handleError(e)
+				    } else {
+				        if (batch) {
+				            cat(paste0(c("safe> ",
+					                 rep("safe+ ",
+					                     max(0, length(code) - 1))),
+					               code), sep="\n")
+				        }
+				        handleValue(e)
+				        # test for whether expression was an assignment
+					sc <- readScript("", txt=code)
+					info <- getInputs(sc)
+					inputs <- info[[1]]@inputs
+					outputs <- info[[1]]@outputs
+					updates <- info[[1]]@updates
+					if (debug) {
+					    cat(paste("inputs: ", paste(inputs, collapse=", "), "\n"))
+					    cat(paste("outputs: ", paste(outputs, collapse=", "), "\n"))
+					    cat(paste("updates: ", paste(updates, collapse=", "), "\n"))
+					}
+					assignment <- FALSE
+					if (length(outputs) > 0) {
+					    if (length(outputs) > 1 || length(updates) > 0)
+					        stop("I did not think this could happen")
+					    symbol <- outputs
+					    assignment <- TRUE
+					} else if (length(updates) > 0) {
+					    symbol <- updates
+					    assignment <- TRUE    
+					}
+					if (assignment) {
+					    assign(symbol, as.numeric(Sys.time()), envir=timeDB)
+					    assign(symbol, tracked, envir=depDB)
+					    if (debug) {
+					        cat("Time stamp database:\n")
+					        print(sapply(ls(timeDB), get, envir=timeDB))
+					        cat("Dependencies database:\n")
+					        print(sapply(ls(depDB), get, envir=depDB))
+					    }
 					}
 				    }
-				}
+			        }
+			        if (newwarnings) {
+			            warnings = warningCalls
+			            names(warnings) = warningMessages
+			            assign("last.warning",
+			                   warnings[1:nwarnings],
+			                   "package:base")
+			            displayWarnings(nwarnings)
+			        }
 			    }
-			    if (newwarnings) {
-			        warnings = warningCalls
-			        names(warnings) = warningMessages
-			        assign("last.warning",
-			               warnings[1:nwarnings],
-			               "package:base")
-			        displayWarnings(nwarnings)
-			    }
+			    prompt <- "safe> "
+			    cmd <- character()
 			}
-		        prompt <- "safe> "
-		        cmd <- character()
 		    }
-		}
-	    }, interrupt = function(x) x)
+	        }, interrupt = function(x) x)
 	    if (inherits(ans, "interrupt")) {
 	        cat("\nInterrupt!\n")
 	        prompt <- "script> "
 	        cmd <- character()
-	    }
-	    else
+	    } else {
 	        stop("Interrupt catcher caught non-interrupt")
+	    }
+        }
+        if (batch) {
+            close(con)
         }
     }
 
-    function(debug=FALSE) {
-        repl(sys.parent(), debug)
+    function(debug=FALSE, infile=NULL) {
+        repl(sys.parent(), debug, infile)
         invisible()
     }
 })
