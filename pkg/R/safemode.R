@@ -200,12 +200,6 @@ safemode <- local({
 				    if (inherits(e, "error")) {
 				        handleError(e)
 				    } else {
-				        if (batch) {
-				            cat(paste0(c("safe> ",
-					                 rep("safe+ ",
-					                     max(0, length(code) - 1))),
-					               code), sep="\n")
-				        }
 				        handleValue(e)
 				        # test for whether expression was an assignment
 					sc <- readScript("", txt=code)
@@ -241,6 +235,12 @@ safemode <- local({
 					    }
 					}
 				    }
+			        }
+			        if (batch) {
+			            cat(paste0(c("safe> ",
+				                 rep("safe+ ",
+				                     max(0, length(cmd) - 1))),
+				               cmd), sep="\n")
 			        }
 			        if (newwarnings) {
 			            warnings = warningCalls

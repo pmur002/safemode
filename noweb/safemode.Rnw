@@ -313,6 +313,9 @@ if (!special) {
     for(e in ans) {
         <<evaluate expression in safe mode>>
     }
+    if (batch) {
+        <<batch expression>>
+    }
     if (newwarnings) {
         warnings = warningCalls
         names(warnings) = warningMessages
@@ -351,9 +354,6 @@ e <- tryCatchWithWarnings(withVisible(eval(e,
 if (inherits(e, "error")) {
     handleError(e)
 } else {
-    if (batch) {
-        <<batch expression>>
-    }
     handleValue(e)
     <<record time stamps and dependencies>>
 }
@@ -671,8 +671,8 @@ In batch mode, we echo the expression text to stdout.
 <<batch expression>>=
 cat(paste0(c("safe> ",
              rep("safe+ ",
-                 max(0, length(code) - 1))),
-           code), sep="\n")
+                 max(0, length(cmd) - 1))),
+           cmd), sep="\n")
 @ 
 
 In batch mode, we must close the input connection.

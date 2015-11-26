@@ -313,6 +313,9 @@ if (!special) \{
     for(e in ans) \{
         \LA{}evaluate expression in safe mode~{\nwtagstyle{}\subpageref{NW3fNyKO-4X48TB-1}}\RA{}
     \}
+    if (batch) \{
+        \LA{}batch expression~{\nwtagstyle{}\subpageref{NW3fNyKO-2EECxy-1}}\RA{}
+    \}
     if (\nwlinkedidentc{newwarnings}{NW3fNyKO-4ZejqA-1}) \{
         warnings = \nwlinkedidentc{warningCalls}{NW3fNyKO-4ZejqA-1}
         names(warnings) = \nwlinkedidentc{warningMessages}{NW3fNyKO-4ZejqA-1}
@@ -351,9 +354,6 @@ e <- \nwlinkedidentc{tryCatchWithWarnings}{NW3fNyKO-1LAAIJ-8}(withVisible(eval(e
 if (inherits(e, "error")) \{
     \nwlinkedidentc{handleError}{NW3fNyKO-1LAAIJ-6}(e)
 \} else \{
-    if (batch) \{
-        \LA{}batch expression~{\nwtagstyle{}\subpageref{NW3fNyKO-2EECxy-1}}\RA{}
-    \}
     \nwlinkedidentc{handleValue}{NW3fNyKO-1LAAIJ-7}(e)
     \LA{}record time stamps and dependencies~{\nwtagstyle{}\subpageref{NW3fNyKO-41HQ4C-1}}\RA{}
 \}
@@ -668,12 +668,12 @@ cat("\\n")
 
 In batch mode, we echo the expression text to stdout.
 
-\nwenddocs{}\nwbegincode{67}\sublabel{NW3fNyKO-2EECxy-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-2EECxy-1}}}\moddef{batch expression~{\nwtagstyle{}\subpageref{NW3fNyKO-2EECxy-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-4X48TB-1}}\nwenddeflinemarkup
+\nwenddocs{}\nwbegincode{67}\sublabel{NW3fNyKO-2EECxy-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-2EECxy-1}}}\moddef{batch expression~{\nwtagstyle{}\subpageref{NW3fNyKO-2EECxy-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-ujlbC-1}}\nwenddeflinemarkup
 cat(paste0(c("safe> ",
              rep("safe+ ",
-                 max(0, length(code) - 1))),
-           code), sep="\\n")
-\nwused{\\{NW3fNyKO-4X48TB-1}}\nwendcode{}\nwbegindocs{68}\nwdocspar
+                 max(0, length(\nwlinkedidentc{cmd}{NW3fNyKO-2jP4FB-1}) - 1))),
+           \nwlinkedidentc{cmd}{NW3fNyKO-2jP4FB-1}), sep="\\n")
+\nwused{\\{NW3fNyKO-ujlbC-1}}\nwidentuses{\\{{\nwixident{cmd}}{cmd}}}\nwindexuse{\nwixident{cmd}}{cmd}{NW3fNyKO-2EECxy-1}\nwendcode{}\nwbegindocs{68}\nwdocspar
 
 In batch mode, we must close the input connection.
 
@@ -730,7 +730,7 @@ from R.
 
 \nwixlogsorted{c}{{batch blank line}{NW3fNyKO-VjREX-1}{\nwixu{NW3fNyKO-3UyNT8-1}\nwixd{NW3fNyKO-VjREX-1}}}%
 \nwixlogsorted{c}{{batch comment}{NW3fNyKO-1r17xi-1}{\nwixu{NW3fNyKO-XzPhD-1}\nwixd{NW3fNyKO-1r17xi-1}}}%
-\nwixlogsorted{c}{{batch expression}{NW3fNyKO-2EECxy-1}{\nwixu{NW3fNyKO-4X48TB-1}\nwixd{NW3fNyKO-2EECxy-1}}}%
+\nwixlogsorted{c}{{batch expression}{NW3fNyKO-2EECxy-1}{\nwixu{NW3fNyKO-ujlbC-1}\nwixd{NW3fNyKO-2EECxy-1}}}%
 \nwixlogsorted{c}{{batch read}{NW3fNyKO-4Qk14X-1}{\nwixu{NW3fNyKO-XzPhD-1}\nwixd{NW3fNyKO-4Qk14X-1}}}%
 \nwixlogsorted{c}{{batch shut down}{NW3fNyKO-1ObEmC-1}{\nwixu{NW3fNyKO-2jP4FB-1}\nwixd{NW3fNyKO-1ObEmC-1}}}%
 \nwixlogsorted{c}{{call the read-eval-print-loop}{NW3fNyKO-nYuTh-1}{\nwixu{NW3fNyKO-or39s-1}\nwixd{NW3fNyKO-nYuTh-1}}}%
