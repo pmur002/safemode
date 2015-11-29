@@ -1,0 +1,26 @@
+
+Notes on adding command-line history to safe mode:
+
+- simple thing to try is timestamp() function
+
+  For example ...
+
+  timestamp("test", prefix="", suffix="", quiet=TRUE)
+
+  NOTE also that timestamp() is basically a call to C_addhistory()
+
+  ... and that the R API has the following ...
+
+  SEXP R_addhistory (SEXP, SEXP, SEXP, SEXP);
+
+- WAY more complex is to make safemode a GUI for R and use the API 
+  functions like ...
+
+  Function: int R_ReadConsole (const char *prompt, unsigned char *buf, 
+                               int buflen, int hist)
+  Function: void R_WriteConsole (const char *buf, int buflen)
+  Function: void R_WriteConsoleEx (const char *buf, int buflen, int otype)
+  Function: void R_ResetConsole ()
+  Function: void R_FlushConsole ()
+  Function: void R_ClearErrConsole () 
+
