@@ -231,7 +231,7 @@ safemode <- local({
 					}
 					if (assignment) {
 					    for (i in symbol) {
-					        assign(i, as.numeric(Sys.time()), envir=timeDB)
+					        assign(i, get_nanotime(), envir=timeDB)
 					        assign(symbol, tracked, envir=depDB)
 					    }
 					    if (debug) {

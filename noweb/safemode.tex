@@ -399,6 +399,8 @@ If that function determines that there are ``output'' or ``update''
 symobls in the expression, then we have an assignment,
 so we record a new time stamp (and update the dependencies) for the
 symbol that was assigned a new value.
+The {\Tt{}get{\_}nanotime()\nwendquote} function from the \pkg{microbenchmark}
+package is used to get more accurate timings.
 
 \nwenddocs{}\nwbegincode{31}\sublabel{NW3fNyKO-41HQ4C-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-41HQ4C-1}}}\moddef{record time stamps and dependencies~{\nwtagstyle{}\subpageref{NW3fNyKO-41HQ4C-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-4X48TB-1}}\nwenddeflinemarkup
 # test for whether expression was an assignment
@@ -420,7 +422,7 @@ if (length(updates) > 0) \{
 \}
 if (assignment) \{
     for (i in symbol) \{
-        assign(i, as.numeric(Sys.time()), envir=timeDB)
+        assign(i, get_nanotime(), envir=timeDB)
         assign(symbol, tracked, envir=depDB)
     \}
     \LA{}debug time and dependency databases~{\nwtagstyle{}\subpageref{NW3fNyKO-4RCJKm-1}}\RA{}

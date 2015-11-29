@@ -3,5 +3,7 @@ importFrom("codetools",
            "findGlobals")
 importFrom("CodeDepends",
            "readScript", "scriptInfo")
+importFrom("microbenchmark",
+           "get_nanotime")
 
 export("safemode")
