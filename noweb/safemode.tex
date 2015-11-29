@@ -197,6 +197,8 @@ if (inherits(ans, "interrupt")) \{
 Expressions are read and processed in a loop. A pass through the loop
 reads a single line of input with {\Tt{}readline()\nwendquote} and adds it to the
 {\Tt{}cmd\nwendquote} buffer (unless we are in batch mode).  
+Each line of input is also added to the command line history 
+with the {\Tt{}timestamp()\nwendquote} function.
 
 We handle (whole-line) comments immediately by discarding them
 (or echoing them in batch mode).
@@ -213,6 +215,7 @@ repeat \{
         \LA{}batch read~{\nwtagstyle{}\subpageref{NW3fNyKO-4Qk14X-1}}\RA{}
     \} else \{
         \nwlinkedidentc{cmd}{NW3fNyKO-2jP4FB-1} <- c(\nwlinkedidentc{cmd}{NW3fNyKO-2jP4FB-1}, readline(\nwlinkedidentc{prompt}{NW3fNyKO-2jP4FB-1}))
+        timestamp(\nwlinkedidentc{cmd}{NW3fNyKO-2jP4FB-1}, prefix="", suffix="", quiet=TRUE)
     \}
     if (grepl("^#", \nwlinkedidentc{cmd}{NW3fNyKO-2jP4FB-1})) \{
         if (batch) \{

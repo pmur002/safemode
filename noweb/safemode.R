@@ -141,6 +141,7 @@ safemode <- local({
 		            cmd <- c(cmd, readLines(con, n=1))
 		        } else {
 		            cmd <- c(cmd, readline(prompt))
+		            timestamp(cmd, prefix="", suffix="", quiet=TRUE)
 		        }
 		        if (grepl("^#", cmd)) {
 		            if (batch) {
