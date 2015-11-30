@@ -8,4 +8,4 @@ Authors@R: c(person("Paul", "Murrell", role = c("aut", "cre"),
 	      person("Ross", "Ihaka", role = "aut"))
 Imports: codetools, CodeDepends, microbenchmark
 Description: This package provides a safe mode for evaluating R expressions. In safe mode, every expression is checked as it is entered and warnings are given if any symbols in the expression are stale.  A symbol is stale if it was assigned a value less recently than any of the symbols it depends on.
-License: GPL3
+License: GPL-3
