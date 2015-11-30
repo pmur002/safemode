@@ -52,6 +52,10 @@ safemode(debug = FALSE, infile = NULL)
   normal R command line.  For example, there is no auto-completion.
 }
 \examples{
+# Normal use to start a "safe mode" session
+\dontrun{safemode()}
+
+# Batch use
 safemode(infile=system.file("scripts", "example.R", package="safemode"))
 }
 \keyword{ debugging }
