@@ -147,6 +147,10 @@ safemode <- local({
 		            cmd <- c(cmd, readline(prompt))
 		            timestamp(cmd, prefix="", suffix="", quiet=TRUE)
 		        }
+		        # Handle EOF in batch mode
+		        if (!length(cmd)) {
+		            return()
+		        }
 		        if (grepl("^#", cmd)) {
 		            if (batch) {
 		                cat(paste0("safe> ", cmd), "\n")

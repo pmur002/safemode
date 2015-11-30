@@ -224,6 +224,10 @@ repeat \{
         \nwlinkedidentc{cmd}{NW3fNyKO-2jP4FB-1} <- c(\nwlinkedidentc{cmd}{NW3fNyKO-2jP4FB-1}, readline(\nwlinkedidentc{prompt}{NW3fNyKO-2jP4FB-1}))
         timestamp(\nwlinkedidentc{cmd}{NW3fNyKO-2jP4FB-1}, prefix="", suffix="", quiet=TRUE)
     \}
+    # Handle EOF in batch mode
+    if (!length(\nwlinkedidentc{cmd}{NW3fNyKO-2jP4FB-1})) \{
+        return()
+    \}
     if (grepl("^#", \nwlinkedidentc{cmd}{NW3fNyKO-2jP4FB-1})) \{
         if (batch) \{
             \LA{}batch comment~{\nwtagstyle{}\subpageref{NW3fNyKO-1r17xi-1}}\RA{}

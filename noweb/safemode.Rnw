@@ -224,6 +224,10 @@ repeat {
         cmd <- c(cmd, readline(prompt))
         timestamp(cmd, prefix="", suffix="", quiet=TRUE)
     }
+    # Handle EOF in batch mode
+    if (!length(cmd)) {
+        return()
+    }
     if (grepl("^#", cmd)) {
         if (batch) {
             <<batch comment>>
