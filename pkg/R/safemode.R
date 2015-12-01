@@ -280,6 +280,8 @@ safemode <- local({
 
     function(debug=FALSE, infile=NULL) {
         repl(sys.parent(), debug, infile)
-        invisible()
+        rm(list=ls(timeDB), envir=timeDB)
+	rm(list=ls(depDB), envir=depDB)
+	invisible()
     }
 })

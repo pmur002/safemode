@@ -114,7 +114,7 @@ provides a read-eval-print-loop.
 \nwenddocs{}\nwbegincode{5}\sublabel{NW3fNyKO-or39s-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-or39s-1}}}\moddef{main function~{\nwtagstyle{}\subpageref{NW3fNyKO-or39s-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-3xdkHW-1}}\nwenddeflinemarkup
 function(debug=FALSE, infile=NULL) \{
     \LA{}call the read-eval-print-loop~{\nwtagstyle{}\subpageref{NW3fNyKO-nYuTh-1}}\RA{}
-    \LA{}return an invisible value~{\nwtagstyle{}\subpageref{NW3fNyKO-S95hp-1}}\RA{}
+    \LA{}shut down~{\nwtagstyle{}\subpageref{NW3fNyKO-2lz4JN-1}}\RA{}
 \}
 \nwused{\\{NW3fNyKO-3xdkHW-1}}\nwendcode{}\nwbegindocs{6}%
 
@@ -127,9 +127,12 @@ The third argument is a file to read R code from (or {\Tt{}NULL\nwendquote}).
 \nwlinkedidentc{repl}{NW3fNyKO-2jP4FB-1}(sys.parent(), debug, infile)
 \nwused{\\{NW3fNyKO-or39s-1}}\nwidentuses{\\{{\nwixident{repl}}{repl}}}\nwindexuse{\nwixident{repl}}{repl}{NW3fNyKO-nYuTh-1}\nwendcode{}\nwbegindocs{8}%
 
-The main function returns an
+On exit, the main function erases the time stamp and dependency 
+databases and returns an
 invisible ({\Tt{}NULL\nwendquote}) value.
-\nwenddocs{}\nwbegincode{9}\sublabel{NW3fNyKO-S95hp-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-S95hp-1}}}\moddef{return an invisible value~{\nwtagstyle{}\subpageref{NW3fNyKO-S95hp-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-or39s-1}}\nwenddeflinemarkup
+\nwenddocs{}\nwbegincode{9}\sublabel{NW3fNyKO-2lz4JN-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3fNyKO-2lz4JN-1}}}\moddef{shut down~{\nwtagstyle{}\subpageref{NW3fNyKO-2lz4JN-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3fNyKO-or39s-1}}\nwenddeflinemarkup
+rm(list=ls(timeDB), envir=timeDB)
+rm(list=ls(depDB), envir=depDB)
 invisible()
 \nwused{\\{NW3fNyKO-or39s-1}}\nwendcode{}\nwbegindocs{10}\nwdocspar
 
@@ -769,8 +772,8 @@ from R.
 \nwixlogsorted{c}{{parse and evaluate expressions}{NW3fNyKO-XzPhD-1}{\nwixu{NW3fNyKO-1uMRLP-1}\nwixd{NW3fNyKO-XzPhD-1}}}%
 \nwixlogsorted{c}{{read-eval-print loop}{NW3fNyKO-2jP4FB-1}{\nwixu{NW3fNyKO-3xdkHW-1}\nwixd{NW3fNyKO-2jP4FB-1}}}%
 \nwixlogsorted{c}{{record time stamps and dependencies}{NW3fNyKO-41HQ4C-1}{\nwixu{NW3fNyKO-4X48TB-1}\nwixd{NW3fNyKO-41HQ4C-1}}}%
-\nwixlogsorted{c}{{return an invisible value}{NW3fNyKO-S95hp-1}{\nwixu{NW3fNyKO-or39s-1}\nwixd{NW3fNyKO-S95hp-1}}}%
 \nwixlogsorted{c}{{safemode.R}{NW3fNyKO-3xdkHW-1}{\nwixd{NW3fNyKO-3xdkHW-1}}}%
+\nwixlogsorted{c}{{shut down}{NW3fNyKO-2lz4JN-1}{\nwixu{NW3fNyKO-or39s-1}\nwixd{NW3fNyKO-2lz4JN-1}}}%
 \nwixlogsorted{c}{{support functions}{NW3fNyKO-1LAAIJ-1}{\nwixu{NW3fNyKO-3xdkHW-1}\nwixd{NW3fNyKO-1LAAIJ-1}\nwixd{NW3fNyKO-1LAAIJ-2}\nwixd{NW3fNyKO-1LAAIJ-3}\nwixd{NW3fNyKO-1LAAIJ-4}\nwixd{NW3fNyKO-1LAAIJ-5}\nwixd{NW3fNyKO-1LAAIJ-6}\nwixd{NW3fNyKO-1LAAIJ-7}\nwixd{NW3fNyKO-1LAAIJ-8}\nwixd{NW3fNyKO-1LAAIJ-9}\nwixd{NW3fNyKO-1LAAIJ-A}}}%
 \nwixlogsorted{c}{{warning state variables}{NW3fNyKO-4ZejqA-1}{\nwixu{NW3fNyKO-3xdkHW-1}\nwixd{NW3fNyKO-4ZejqA-1}}}%
 \nwixlogsorted{i}{{\nwixident{cmd}}{cmd}}%

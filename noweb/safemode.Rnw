@@ -114,7 +114,7 @@ provides a read-eval-print-loop.
 <<main function>>=
 function(debug=FALSE, infile=NULL) {
     <<call the read-eval-print-loop>>
-    <<return an invisible value>>
+    <<shut down>>
 }
 @ %
 
@@ -127,9 +127,12 @@ The third argument is a file to read R code from (or [[NULL]]).
 repl(sys.parent(), debug, infile)
 @ %
 
-The main function returns an
+On exit, the main function erases the time stamp and dependency 
+databases and returns an
 invisible ([[NULL]]) value.
-<<return an invisible value>>=
+<<shut down>>=
+rm(list=ls(timeDB), envir=timeDB)
+rm(list=ls(depDB), envir=depDB)
 invisible()
 @ 
 
